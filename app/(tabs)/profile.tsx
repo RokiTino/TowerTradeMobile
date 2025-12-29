@@ -39,7 +39,7 @@ export default function ProfileScreen() {
       icon: 'card-outline',
       title: 'Payment Methods',
       subtitle: 'Manage your payment options',
-      onPress: () => Alert.alert('Coming Soon', 'This feature is under development'),
+      onPress: () => router.push('/wallet'),
     },
     {
       id: '3',

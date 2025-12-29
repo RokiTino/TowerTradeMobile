@@ -1,21 +1,66 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { generateText } from '@fastshot/ai';
 import { Colors, Typography, Spacing, BorderRadius } from '@/constants/Theme';
 import TowerTradeLogo from '@/components/TowerTradeLogo';
+import { Transaction } from '@/types/payment';
+import { getTransactions } from '@/utils/storage';
 
 export default function PortfolioScreen() {
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [aiAnalysis, setAiAnalysis] = useState<string>('');
+  const [loadingAI, setLoadingAI] = useState(false);
+
   const portfolioValue = 285000;
   const totalInvested = 250000;
   const totalReturn = 35000;
   const returnPercentage = ((totalReturn / totalInvested) * 100).toFixed(2);
 
   const investments = [
-    { id: '1', name: 'Beachfront Villa', invested: 50000, currentValue: 57500, roi: 15 },
-    { id: '2', name: 'Urban Loft Studio', invested: 75000, currentValue: 82500, roi: 10 },
-    { id: '3', name: 'Suburban Family Home', invested: 125000, currentValue: 145000, roi: 16 },
+    { id: '1', name: 'Beachfront Villa', invested: 50000, currentValue: 57500, roi: 15, type: 'Beachfront' },
+    { id: '2', name: 'Urban Loft Studio', invested: 75000, currentValue: 82500, roi: 10, type: 'Urban' },
+    { id: '3', name: 'Suburban Family Home', invested: 125000, currentValue: 145000, roi: 16, type: 'Suburban' },
   ];
+
+  useEffect(() => {
+    loadTransactions();
+    generateAIAnalysis();
+  }, []);
+
+  const loadTransactions = async () => {
+    try {
+      const txns = await getTransactions();
+      setTransactions(txns);
+    } catch (error) {
+      console.error('Error loading transactions:', error);
+    }
+  };
+
+  const generateAIAnalysis = async () => {
+    setLoadingAI(true);
+    try {
+      // Analyze portfolio composition
+      const beachfrontCount = investments.filter(i => i.type === 'Beachfront').length;
+      const urbanCount = investments.filter(i => i.type === 'Urban').length;
+      const suburbanCount = investments.filter(i => i.type === 'Suburban').length;
+
+      const portfolioSummary = `Portfolio: ${investments.length} properties - ${beachfrontCount} Beachfront, ${urbanCount} Urban, ${suburbanCount} Suburban. Total value: $${portfolioValue}, Return: ${returnPercentage}%.`;
+
+      const response = await generateText({
+        prompt: `As a real estate investment advisor, analyze this portfolio and provide 2-3 concise diversification recommendations: ${portfolioSummary}. Focus on balance and risk mitigation. Keep response under 100 words.`,
+        maxTokens: 150,
+      });
+
+      setAiAnalysis(response || 'Unable to generate analysis at this time.');
+    } catch (error) {
+      console.error('AI analysis error:', error);
+      setAiAnalysis('Portfolio analysis unavailable. Please try again later.');
+    } finally {
+      setLoadingAI(false);
+    }
+  };
 
   const formatCurrency = (amount: number) => {
     return amount.toLocaleString('en-US', {
@@ -60,6 +105,70 @@ export default function PortfolioScreen() {
             </View>
           </View>
         </View>
+
+        {/* AI Portfolio Counselor */}
+        <View style={styles.aiCard}>
+          <View style={styles.aiHeader}>
+            <Ionicons name="sparkles" size={24} color={Colors.towerGold} />
+            <Text style={styles.aiTitle}>AI Portfolio Counselor</Text>
+          </View>
+          {loadingAI ? (
+            <View style={styles.aiLoading}>
+              <ActivityIndicator color={Colors.towerGold} />
+              <Text style={styles.aiLoadingText}>Analyzing your portfolio...</Text>
+            </View>
+          ) : (
+            <Text style={styles.aiText}>{aiAnalysis}</Text>
+          )}
+        </View>
+
+        {/* Recent Transactions */}
+        {transactions.length > 0 && (
+          <>
+            <Text style={styles.sectionTitle}>Recent Activity</Text>
+            {transactions.slice(0, 5).map((transaction) => (
+              <View key={transaction.id} style={styles.transactionCard}>
+                <View style={styles.transactionIcon}>
+                  <Ionicons name="arrow-up" size={20} color={Colors.towerGold} />
+                </View>
+                <View style={styles.transactionInfo}>
+                  <Text style={styles.transactionName}>{transaction.propertyName}</Text>
+                  <Text style={styles.transactionDate}>
+                    {new Date(transaction.date).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                    })}
+                  </Text>
+                </View>
+                <View style={styles.transactionRight}>
+                  <Text style={styles.transactionAmount}>
+                    {formatCurrency(transaction.amount)}
+                  </Text>
+                  <View
+                    style={[
+                      styles.statusBadge,
+                      transaction.status === 'completed' && styles.statusCompleted,
+                      transaction.status === 'pending' && styles.statusPending,
+                      transaction.status === 'processing' && styles.statusProcessing,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.statusText,
+                        transaction.status === 'completed' && styles.statusTextCompleted,
+                        transaction.status === 'pending' && styles.statusTextPending,
+                        transaction.status === 'processing' && styles.statusTextProcessing,
+                      ]}
+                    >
+                      {transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            ))}
+          </>
+        )}
 
         {/* Active Investments */}
         <Text style={styles.sectionTitle}>Active Investments</Text>
@@ -249,5 +358,106 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     marginLeft: Spacing.sm,
     lineHeight: 20,
+  },
+  aiCard: {
+    backgroundColor: '#FFF9F0',
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.lg,
+    marginBottom: Spacing.lg,
+    borderWidth: 1,
+    borderColor: Colors.towerGold,
+  },
+  aiHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+    gap: Spacing.sm,
+  },
+  aiTitle: {
+    fontSize: Typography.heading4,
+    fontWeight: Typography.bold,
+    color: Colors.ebonyBlack,
+  },
+  aiLoading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  aiLoadingText: {
+    fontSize: Typography.body,
+    color: Colors.textSecondary,
+  },
+  aiText: {
+    fontSize: Typography.body,
+    color: Colors.ebonyBlack,
+    lineHeight: 22,
+  },
+  transactionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.pureWhite,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.md,
+    marginBottom: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.softSlate,
+  },
+  transactionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FFF9F0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: Spacing.md,
+  },
+  transactionInfo: {
+    flex: 1,
+  },
+  transactionName: {
+    fontSize: Typography.body,
+    fontWeight: Typography.semiBold,
+    color: Colors.ebonyBlack,
+    marginBottom: 4,
+  },
+  transactionDate: {
+    fontSize: Typography.bodySmall,
+    color: Colors.textSecondary,
+  },
+  transactionRight: {
+    alignItems: 'flex-end',
+  },
+  transactionAmount: {
+    fontSize: Typography.body,
+    fontWeight: Typography.semiBold,
+    color: Colors.ebonyBlack,
+    marginBottom: 4,
+  },
+  statusBadge: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.sm,
+  },
+  statusCompleted: {
+    backgroundColor: '#E8F5E9',
+  },
+  statusPending: {
+    backgroundColor: '#FFF3E0',
+  },
+  statusProcessing: {
+    backgroundColor: '#E3F2FD',
+  },
+  statusText: {
+    fontSize: Typography.caption,
+    fontWeight: Typography.semiBold,
+  },
+  statusTextCompleted: {
+    color: Colors.success,
+  },
+  statusTextPending: {
+    color: Colors.warning,
+  },
+  statusTextProcessing: {
+    color: '#2196F3',
   },
 });

@@ -17,8 +17,11 @@ import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { mockProperties } from '@/data/mockProperties';
 import { Property } from '@/types/property';
+import { Transaction } from '@/types/payment';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '@/constants/Theme';
 import TowerTradeLogo from '@/components/TowerTradeLogo';
+import CheckoutModal from '@/components/CheckoutModal';
+import InvestmentSuccessModal from '@/components/InvestmentSuccessModal';
 
 export default function PropertyDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -26,6 +29,9 @@ export default function PropertyDetailScreen() {
   const [property, setProperty] = useState<Property | null>(null);
   const [investmentAmount, setInvestmentAmount] = useState('');
   const [progressAnim] = useState(new Animated.Value(0));
+  const [showCheckout, setShowCheckout] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [completedTransaction, setCompletedTransaction] = useState<Transaction | null>(null);
 
   const animateProgress = useCallback((percentage: number) => {
     Animated.timing(progressAnim, {
@@ -73,24 +79,24 @@ export default function PropertyDetailScreen() {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
 
-    Alert.alert(
-      'Confirm Investment',
-      `You are about to invest ${formatCurrency(amount)} in ${property?.name}. This is a demo app, so no actual transaction will occur.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Confirm',
-          onPress: () => {
-            Alert.alert('Success', 'Investment recorded successfully!', [
-              {
-                text: 'OK',
-                onPress: () => router.back(),
-              },
-            ]);
-          },
-        },
-      ]
-    );
+    // Open checkout modal
+    setShowCheckout(true);
+  };
+
+  const handleTransactionSuccess = (transaction: Transaction) => {
+    setCompletedTransaction(transaction);
+    setShowCheckout(false);
+    setShowSuccess(true);
+  };
+
+  const handleViewCertificate = () => {
+    setShowSuccess(false);
+    router.push('/(tabs)/portfolio');
+  };
+
+  const handleCloseSuccess = () => {
+    setShowSuccess(false);
+    router.push('/(tabs)/portfolio');
   };
 
   if (!property) {
@@ -212,6 +218,23 @@ export default function PropertyDetailScreen() {
           <Text style={styles.footerUrl}>www.towertrade.com</Text>
         </View>
       </ScrollView>
+
+      {/* Checkout Modal */}
+      <CheckoutModal
+        visible={showCheckout}
+        property={property}
+        amount={parseFloat(investmentAmount || '0')}
+        onClose={() => setShowCheckout(false)}
+        onSuccess={handleTransactionSuccess}
+      />
+
+      {/* Success Modal */}
+      <InvestmentSuccessModal
+        visible={showSuccess}
+        transaction={completedTransaction}
+        onClose={handleCloseSuccess}
+        onViewCertificate={handleViewCertificate}
+      />
     </SafeAreaView>
   );
 }
