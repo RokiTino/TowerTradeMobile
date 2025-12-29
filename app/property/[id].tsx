@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { mockProperties } from '@/data/mockProperties';
 import { Property } from '@/types/property';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '@/constants/Theme';
+import TowerTradeLogo from '@/components/TowerTradeLogo';
 
 export default function PropertyDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -123,11 +124,7 @@ export default function PropertyDetailScreen() {
             <Ionicons name="arrow-back" size={24} color={Colors.ebonyBlack} />
           </TouchableOpacity>
           <View style={styles.headerBranding}>
-            <Text style={styles.headerTitle}>
-              <Text style={styles.headerTitleGold}>Tower</Text>
-              <Text style={styles.headerTitleBlack}>Trade</Text>
-            </Text>
-            <Text style={styles.headerSubtitle}>invest from home.</Text>
+            <TowerTradeLogo width={180} />
           </View>
         </View>
 
@@ -211,7 +208,7 @@ export default function PropertyDetailScreen() {
 
         {/* Footer Branding */}
         <View style={styles.footer}>
-          <Ionicons name="business" size={32} color={Colors.ebonyBlack} />
+          <TowerTradeLogo width={160} />
           <Text style={styles.footerUrl}>www.towertrade.com</Text>
         </View>
       </ScrollView>
@@ -251,21 +248,6 @@ const styles = StyleSheet.create({
   headerBranding: {
     alignItems: 'center',
     flex: 1,
-  },
-  headerTitle: {
-    fontSize: Typography.heading3,
-  },
-  headerTitleGold: {
-    color: Colors.towerGold,
-    fontWeight: Typography.bold,
-  },
-  headerTitleBlack: {
-    color: Colors.ebonyBlack,
-    fontWeight: Typography.bold,
-  },
-  headerSubtitle: {
-    fontSize: Typography.caption,
-    color: Colors.textSecondary,
   },
   propertyImage: {
     width: '100%',

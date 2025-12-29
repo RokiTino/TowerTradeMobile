@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, BorderRadius } from '@/constants/Theme';
+import TowerTradeLogo from '@/components/TowerTradeLogo';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -73,10 +74,7 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>
-          <Text style={styles.headerTitleGold}>My </Text>
-          <Text style={styles.headerTitleBlack}>Profile</Text>
-        </Text>
+        <TowerTradeLogo width={220} />
         <Text style={styles.headerSubtitle}>Manage Your Account</Text>
       </View>
 
@@ -156,22 +154,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.md,
     paddingBottom: Spacing.lg,
-  },
-  headerTitle: {
-    fontSize: Typography.heading1,
-    marginBottom: Spacing.xs,
-  },
-  headerTitleGold: {
-    color: Colors.towerGold,
-    fontWeight: Typography.bold,
-  },
-  headerTitleBlack: {
-    color: Colors.ebonyBlack,
-    fontWeight: Typography.bold,
+    alignItems: 'center',
   },
   headerSubtitle: {
     fontSize: Typography.bodySmall,
     color: Colors.textSecondary,
+    marginTop: Spacing.xs,
   },
   scrollView: {
     flex: 1,

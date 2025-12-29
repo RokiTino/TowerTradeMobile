@@ -14,6 +14,7 @@ import { mockProperties } from '@/data/mockProperties';
 import { Property } from '@/types/property';
 import { Colors, Typography, Spacing, BorderRadius } from '@/constants/Theme';
 import { generateBatchInsights } from '@/services/aiInsightService';
+import TowerTradeLogo from '@/components/TowerTradeLogo';
 
 export default function DiscoveryScreen() {
   const router = useRouter();
@@ -77,10 +78,7 @@ export default function DiscoveryScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>
-          <Text style={styles.headerTitleGold}>Tower</Text>
-          <Text style={styles.headerTitleBlack}>Trade</Text>
-        </Text>
+        <TowerTradeLogo width={220} />
         <Text style={styles.headerSubtitle}>Premium Real Estate Opportunities</Text>
         {aiInsightsLoading && (
           <View style={styles.aiLoadingBanner}>
@@ -120,22 +118,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.md,
     paddingBottom: Spacing.lg,
-  },
-  headerTitle: {
-    fontSize: Typography.heading1,
-    marginBottom: Spacing.xs,
-  },
-  headerTitleGold: {
-    color: Colors.towerGold,
-    fontWeight: Typography.bold,
-  },
-  headerTitleBlack: {
-    color: Colors.ebonyBlack,
-    fontWeight: Typography.bold,
+    alignItems: 'center',
   },
   headerSubtitle: {
     fontSize: Typography.bodySmall,
     color: Colors.textSecondary,
+    marginTop: Spacing.xs,
   },
   aiLoadingBanner: {
     flexDirection: 'row',

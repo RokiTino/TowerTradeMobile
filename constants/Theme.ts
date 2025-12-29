@@ -4,14 +4,14 @@
  */
 
 export const Colors = {
-  // Primary Palette
-  towerGold: '#A67C4B',
+  // Primary Palette - Updated to match official TowerTrade logo
+  towerGold: '#B08D57', // Exact gold from TowerTrade logo
   ebonyBlack: '#1A1A1A',
   pureWhite: '#FFFFFF',
   softSlate: '#E0E0E0',
 
   // Semantic Colors
-  primary: '#A67C4B',
+  primary: '#B08D57',
   background: '#FFFFFF',
   text: '#1A1A1A',
   textSecondary: '#666666',

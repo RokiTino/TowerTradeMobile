@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, BorderRadius } from '@/constants/Theme';
+import TowerTradeLogo from '@/components/TowerTradeLogo';
 
 export default function PortfolioScreen() {
   const portfolioValue = 285000;
@@ -28,10 +29,7 @@ export default function PortfolioScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>
-          <Text style={styles.headerTitleGold}>My </Text>
-          <Text style={styles.headerTitleBlack}>Portfolio</Text>
-        </Text>
+        <TowerTradeLogo width={220} />
         <Text style={styles.headerSubtitle}>Track Your Investments</Text>
       </View>
 
@@ -114,22 +112,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.md,
     paddingBottom: Spacing.lg,
-  },
-  headerTitle: {
-    fontSize: Typography.heading1,
-    marginBottom: Spacing.xs,
-  },
-  headerTitleGold: {
-    color: Colors.towerGold,
-    fontWeight: Typography.bold,
-  },
-  headerTitleBlack: {
-    color: Colors.ebonyBlack,
-    fontWeight: Typography.bold,
+    alignItems: 'center',
   },
   headerSubtitle: {
     fontSize: Typography.bodySmall,
     color: Colors.textSecondary,
+    marginTop: Spacing.xs,
   },
   scrollView: {
     flex: 1,

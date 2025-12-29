@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Colors, Typography, Spacing, BorderRadius } from '@/constants/Theme';
-import { Ionicons } from '@expo/vector-icons';
+import TowerTradeLogo from '@/components/TowerTradeLogo';
 
 export default function SignUpScreen() {
   const router = useRouter();
@@ -62,14 +62,7 @@ export default function SignUpScreen() {
       >
         {/* Logo and Branding */}
         <View style={styles.header}>
-          <View style={styles.logoContainer}>
-            <Ionicons name="business" size={48} color={Colors.ebonyBlack} />
-          </View>
-          <Text style={styles.logoText}>
-            <Text style={styles.logoTower}>Tower</Text>
-            <Text style={styles.logoTrade}>Trade</Text>
-          </Text>
-          <Text style={styles.tagline}>invest from home.</Text>
+          <TowerTradeLogo width={260} />
         </View>
 
         <Text style={styles.title}>Create Account</Text>
@@ -168,25 +161,6 @@ const styles = StyleSheet.create({
   header: {
     alignItems: 'center',
     marginBottom: Spacing.lg,
-  },
-  logoContainer: {
-    marginBottom: Spacing.md,
-  },
-  logoText: {
-    fontSize: Typography.heading2,
-    marginBottom: Spacing.xs,
-  },
-  logoTower: {
-    color: Colors.towerGold,
-    fontWeight: Typography.bold,
-  },
-  logoTrade: {
-    color: Colors.ebonyBlack,
-    fontWeight: Typography.bold,
-  },
-  tagline: {
-    fontSize: Typography.bodySmall,
-    color: Colors.textSecondary,
   },
   title: {
     fontSize: Typography.heading3,
