@@ -46,3 +46,11 @@ app-example
 .fastshot-logs/
 examples/
 CLAUDE.md
+
+# Firebase Configuration Files (sensitive - do not commit)
+android/google-services.json
+ios/GoogleService-Info.plist
+
+# Firebase local config
+firebase-config.ts
+firebase-config.js
