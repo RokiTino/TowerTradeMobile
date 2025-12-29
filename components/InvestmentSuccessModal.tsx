@@ -7,13 +7,13 @@ import {
   TouchableOpacity,
   Animated,
   Platform,
-  Image,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '@/constants/Theme';
 import { Transaction } from '@/types/payment';
+import TowerTradeLogo from '@/components/TowerTradeLogo';
 
 interface InvestmentSuccessModalProps {
   visible: boolean;
@@ -130,11 +130,7 @@ export default function InvestmentSuccessModal({
           <View style={styles.certificate}>
             {/* Logo */}
             <View style={styles.certificateHeader}>
-              <Image
-                source={require('@/assets/images/tower-trade-logo.png')}
-                style={styles.logo}
-                resizeMode="contain"
-              />
+              <TowerTradeLogo width={200} />
             </View>
 
             <View style={styles.divider} />
@@ -279,10 +275,6 @@ const styles = StyleSheet.create({
   certificateHeader: {
     alignItems: 'center',
     marginBottom: Spacing.md,
-  },
-  logo: {
-    width: 200,
-    height: 60,
   },
   divider: {
     height: 1,
