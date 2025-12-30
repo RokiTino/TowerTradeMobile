@@ -8,11 +8,11 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Alert,
+  Alert, Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Colors, Typography, Spacing, BorderRadius } from '@/constants/Theme';
-import TowerTradeLogo from '@/components/TowerTradeLogo';
+// import TowerTradeLogo from '@/components/TowerTradeLogo';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -46,7 +46,7 @@ export default function LoginScreen() {
       >
         {/* Logo and Branding */}
         <View style={styles.header}>
-          <TowerTradeLogo width={280} />
+          <Image source={require('@/assets/images/logo.png')} style={{ marginTop: 12, width: 250, height: 220, resizeMode: 'contain' }} />
         </View>
 
         {/* Form */}
