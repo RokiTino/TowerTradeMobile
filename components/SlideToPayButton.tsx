@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef } from 'react';
 import {
   View,
   Text,
@@ -23,7 +23,6 @@ interface SlideToPayButtonProps {
 }
 
 export default function SlideToPayButton({ onSlideComplete, disabled = false }: SlideToPayButtonProps) {
-  const [isSliding, setIsSliding] = useState(false);
   const slideAnim = useRef(new Animated.Value(0)).current;
   const textOpacity = useRef(new Animated.Value(1)).current;
 
@@ -32,7 +31,6 @@ export default function SlideToPayButton({ onSlideComplete, disabled = false }: 
       onStartShouldSetPanResponder: () => !disabled,
       onMoveShouldSetPanResponder: () => !disabled,
       onPanResponderGrant: () => {
-        setIsSliding(true);
         if (Platform.OS === 'ios') {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         }
@@ -75,7 +73,6 @@ export default function SlideToPayButton({ onSlideComplete, disabled = false }: 
             toValue: 1,
             useNativeDriver: false,
           }).start();
-          setIsSliding(false);
         }
       },
     })

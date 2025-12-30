@@ -19,7 +19,6 @@ export default function WalletScreen() {
   const router = useRouter();
   const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadPaymentMethods();
@@ -30,10 +29,8 @@ export default function WalletScreen() {
       const [cards, accounts] = await Promise.all([getCreditCards(), getBankAccounts()]);
       setCreditCards(cards);
       setBankAccounts(accounts);
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'Failed to load payment methods');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -50,7 +47,7 @@ export default function WalletScreen() {
             try {
               await deleteCreditCard(cardId);
               await loadPaymentMethods();
-            } catch (error) {
+            } catch {
               Alert.alert('Error', 'Failed to delete card');
             }
           },
@@ -72,7 +69,7 @@ export default function WalletScreen() {
             try {
               await deleteBankAccount(accountId);
               await loadPaymentMethods();
-            } catch (error) {
+            } catch {
               Alert.alert('Error', 'Failed to delete account');
             }
           },
