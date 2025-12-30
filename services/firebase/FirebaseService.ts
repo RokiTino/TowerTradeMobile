@@ -35,7 +35,7 @@ export class FirebaseService {
       this.initialized = true;
 
       // Set up auth state listener
-      auth().onAuthStateChanged((user) => {
+      auth().onAuthStateChanged((user: any) => {
         this.currentUser = user;
         console.log('Auth state changed:', user ? user.uid : 'No user');
       });
