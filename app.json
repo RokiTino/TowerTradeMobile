@@ -16,7 +16,8 @@
         "foregroundImage": "./assets/images/logo.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.robertinod.investmate"
     },
     "web": {
       "bundler": "metro",
@@ -38,6 +39,12 @@
     "experiments": {
       "typedRoutes": true,
       "baseUrl": ""
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "2c978996-e66e-4953-83a6-1c49e6d46e2c"
+      }
     }
   }
 }
