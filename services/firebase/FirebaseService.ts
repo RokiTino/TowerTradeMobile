@@ -138,5 +138,6 @@ export class FirebaseService {
   }
 }
 
-// Auto-initialize Firebase when this module is imported
-FirebaseService.initialize();
+// Note: Firebase auto-initialization has been moved to FirebaseWrapper
+// This service is kept for backward compatibility but initialization
+// is now handled lazily through FirebaseWrapper.isAvailable()

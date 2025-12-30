@@ -3,32 +3,44 @@
  * Handles property data operations with Firebase Firestore
  */
 
-import firestore from '@react-native-firebase/firestore';
 import { Property } from '@/types/property';
+import { FirebaseWrapper } from '../firebase/FirebaseWrapper';
 
 export class FirebasePropertyRepository {
   private userId: string;
-  private firestore = firestore();
+  private firestore: any;
 
   constructor(userId: string) {
     this.userId = userId;
+    // Lazy initialization - only get firestore when needed
+    this.firestore = null;
+  }
+
+  /**
+   * Get Firestore instance (lazy initialization)
+   */
+  private getFirestore() {
+    if (!this.firestore) {
+      this.firestore = FirebaseWrapper.getFirestore();
+    }
+    return this.firestore;
   }
 
   /**
    * Subscribe to real-time property updates
    */
   subscribeToProperties(callback: (properties: Property[]) => void): () => void {
-    const unsubscribe = this.firestore
+    const unsubscribe = this.getFirestore()
       .collection('properties')
       .onSnapshot(
-        (snapshot) => {
-          const properties: Property[] = snapshot.docs.map((doc) => ({
+        (snapshot: any) => {
+          const properties: Property[] = snapshot.docs.map((doc: any) => ({
             id: doc.id,
             ...doc.data(),
           } as Property));
           callback(properties);
         },
-        (error) => {
+        (error: any) => {
           console.error('Error fetching properties:', error);
           callback([]);
         }
@@ -42,8 +54,8 @@ export class FirebasePropertyRepository {
    */
   async getProperties(): Promise<Property[]> {
     try {
-      const snapshot = await this.firestore.collection('properties').get();
-      return snapshot.docs.map((doc) => ({
+      const snapshot = await this.getFirestore().collection('properties').get();
+      return snapshot.docs.map((doc: any) => ({
         id: doc.id,
         ...doc.data(),
       } as Property));
@@ -58,7 +70,7 @@ export class FirebasePropertyRepository {
    */
   async getPropertyById(propertyId: string): Promise<Property | null> {
     try {
-      const doc = await this.firestore.collection('properties').doc(propertyId).get();
+      const doc = await this.getFirestore().collection('properties').doc(propertyId).get();
       if (doc.exists()) {
         return { id: doc.id, ...doc.data() } as Property;
       }
@@ -73,18 +85,18 @@ export class FirebasePropertyRepository {
    * Subscribe to single property real-time updates
    */
   subscribeToProperty(propertyId: string, callback: (property: Property | null) => void): () => void {
-    const unsubscribe = this.firestore
+    const unsubscribe = this.getFirestore()
       .collection('properties')
       .doc(propertyId)
       .onSnapshot(
-        (doc) => {
+        (doc: any) => {
           if (doc.exists()) {
             callback({ id: doc.id, ...doc.data() } as Property);
           } else {
             callback(null);
           }
         },
-        (error) => {
+        (error: any) => {
           console.error('Error fetching property:', error);
           callback(null);
         }
@@ -98,7 +110,8 @@ export class FirebasePropertyRepository {
    */
   async updatePropertyFunding(propertyId: string, newRaisedAmount: number): Promise<void> {
     try {
-      await this.firestore.collection('properties').doc(propertyId).update({
+      const firestore = this.getFirestore();
+      await firestore.collection('properties').doc(propertyId).update({
         raisedAmount: newRaisedAmount,
         updatedAt: firestore.FieldValue.serverTimestamp(),
       });
@@ -114,7 +127,7 @@ export class FirebasePropertyRepository {
   async getUserInvestedProperties(): Promise<Property[]> {
     try {
       // Get user's transactions to find invested properties
-      const transactionsSnapshot = await this.firestore
+      const transactionsSnapshot = await this.getFirestore()
         .collection('users')
         .doc(this.userId)
         .collection('transactions')
@@ -122,7 +135,7 @@ export class FirebasePropertyRepository {
         .get();
 
       const propertyIds = new Set<string>();
-      transactionsSnapshot.docs.forEach((doc) => {
+      transactionsSnapshot.docs.forEach((doc: any) => {
         const data = doc.data();
         if (data.propertyId) {
           propertyIds.add(data.propertyId);

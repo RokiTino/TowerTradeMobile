@@ -107,15 +107,11 @@ export default function LoginScreen() {
             </Text>
           </TouchableOpacity>
 
-          {/* Divider */}
-          <View style={styles.dividerContainer}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>or</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          {/* Google Sign-In */}
-          <GoogleSignInButton onSuccess={handleGoogleSignInSuccess} />
+          {/* Google Sign-In (only shows if Firebase is available) */}
+          <GoogleSignInButton
+            onSuccess={handleGoogleSignInSuccess}
+            divider={true}
+          />
         </View>
 
         {/* Sign Up Link */}
@@ -205,21 +201,5 @@ const styles = StyleSheet.create({
     fontSize: Typography.body,
     color: Colors.towerGold,
     fontWeight: Typography.semiBold,
-  },
-  dividerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: Spacing.lg,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: Colors.softSlate,
-  },
-  dividerText: {
-    marginHorizontal: Spacing.md,
-    fontSize: Typography.bodySmall,
-    color: Colors.textSecondary,
-    fontWeight: Typography.medium,
   },
 });

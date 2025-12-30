@@ -3,23 +3,39 @@
  * Premium styled button for Google authentication
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, View, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, BorderRadius } from '@/constants/Theme';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { useAuth } from '@/contexts/AuthContext';
+import { FirebaseWrapper } from '@/services/firebase/FirebaseWrapper';
 
 interface GoogleSignInButtonProps {
   onSuccess?: () => void;
   onError?: (error: Error) => void;
+  divider?: boolean;
 }
 
-export default function GoogleSignInButton({ onSuccess, onError }: GoogleSignInButtonProps) {
+export default function GoogleSignInButton({ onSuccess, onError, divider = false }: GoogleSignInButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [isAvailable, setIsAvailable] = useState(false);
   const { signInWithGoogle } = useAuth();
 
+  useEffect(() => {
+    // Check if Firebase is available for Google Sign-In
+    setIsAvailable(FirebaseWrapper.isAvailable());
+  }, []);
+
   const handleGoogleSignIn = async () => {
+    if (!isAvailable) {
+      Alert.alert(
+        'Firebase Required',
+        'Google Sign-In requires Firebase configuration. Please add google-services.json (Android) or GoogleService-Info.plist (iOS) to enable this feature.'
+      );
+      return;
+    }
+
     try {
       setIsLoading(true);
 
@@ -66,22 +82,38 @@ export default function GoogleSignInButton({ onSuccess, onError }: GoogleSignInB
     }
   };
 
+  // Don't render if Firebase is not available
+  if (!isAvailable) {
+    return null;
+  }
+
   return (
-    <TouchableOpacity
-      style={[styles.button, isLoading && styles.buttonDisabled]}
-      onPress={handleGoogleSignIn}
-      disabled={isLoading}
-      activeOpacity={0.7}
-    >
-      {isLoading ? (
-        <ActivityIndicator size="small" color={Colors.ebonyBlack} />
-      ) : (
-        <View style={styles.buttonContent}>
-          <Ionicons name="logo-google" size={20} color={Colors.ebonyBlack} />
-          <Text style={styles.buttonText}>Continue with Google</Text>
+    <>
+      {/* Divider */}
+      {divider && (
+        <View style={styles.dividerContainer}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>or</Text>
+          <View style={styles.dividerLine} />
         </View>
       )}
-    </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.button, isLoading && styles.buttonDisabled]}
+        onPress={handleGoogleSignIn}
+        disabled={isLoading}
+        activeOpacity={0.7}
+      >
+        {isLoading ? (
+          <ActivityIndicator size="small" color={Colors.ebonyBlack} />
+        ) : (
+          <View style={styles.buttonContent}>
+            <Ionicons name="logo-google" size={20} color={Colors.ebonyBlack} />
+            <Text style={styles.buttonText}>Continue with Google</Text>
+          </View>
+        )}
+      </TouchableOpacity>
+    </>
   );
 }
 
@@ -114,5 +146,21 @@ const styles = StyleSheet.create({
     fontSize: Typography.body,
     fontWeight: Typography.semiBold,
     letterSpacing: 0.3,
+  },
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: Spacing.lg,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: Colors.softSlate,
+  },
+  dividerText: {
+    marginHorizontal: Spacing.md,
+    fontSize: Typography.bodySmall,
+    color: Colors.textSecondary,
+    fontWeight: Typography.medium,
   },
 });
