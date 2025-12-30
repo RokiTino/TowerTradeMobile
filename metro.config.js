@@ -22,6 +22,27 @@ config.resolver = {
   // Fix for react-native-svg module resolution
   sourceExts: [...(config.resolver.sourceExts || []), 'svg'],
   resolverMainFields: ['react-native', 'browser', 'main'],
+  // Blacklist native-only packages for web builds
+  resolveRequest: (context, moduleName, platform) => {
+    // List of native-only modules to exclude from web builds
+    const nativeOnlyModules = [
+      'react-native-fbsdk-next',
+      '@react-native-firebase/app',
+      '@react-native-firebase/auth',
+      '@react-native-firebase/firestore',
+      '@react-native-google-signin/google-signin',
+    ];
+
+    // If building for web, provide empty modules for native-only packages
+    if (platform === 'web' && nativeOnlyModules.includes(moduleName)) {
+      return {
+        type: 'empty',
+      };
+    }
+
+    // Use default resolution
+    return context.resolveRequest(context, moduleName, platform);
+  },
 };
 
 // Configure Metro for proxy deployment

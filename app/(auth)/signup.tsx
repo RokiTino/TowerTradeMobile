@@ -18,7 +18,6 @@ import DividerWithText from '@/components/DividerWithText';
 import PremiumLoadingOverlay from '@/components/PremiumLoadingOverlay';
 import { FirebaseWrapper } from '@/services/firebase/FirebaseWrapper';
 import { useAuth } from '@/contexts/AuthContext';
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
 export default function SignUpScreen() {
   const router = useRouter();
@@ -60,6 +59,12 @@ export default function SignUpScreen() {
   };
 
   const handleGoogleSignIn = async () => {
+    // Google Sign-In is not available on web
+    if (Platform.OS === 'web') {
+      Alert.alert('Not Available', 'Google Sign-In is only available on iOS and Android.');
+      return;
+    }
+
     if (!FirebaseWrapper.isAvailable()) {
       Alert.alert('Configuration Required', 'Google Sign-In requires Firebase configuration. Please contact support.');
       return;
@@ -68,6 +73,9 @@ export default function SignUpScreen() {
     setSocialLoading('google');
     setLoadingMessage('Creating account with Google...');
     try {
+      // Dynamically import Google Sign-In SDK (only available on native platforms)
+      const { GoogleSignin } = require('@react-native-google-signin/google-signin');
+
       await GoogleSignin.hasPlayServices();
       const response = await GoogleSignin.signIn();
 

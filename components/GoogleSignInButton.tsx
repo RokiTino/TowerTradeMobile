@@ -1,13 +1,13 @@
 /**
  * Google Sign-In Button Component
  * Premium styled button for Google authentication
+ * Platform-guarded to prevent loading native modules on web
  */
 
 import React, { useState, useEffect } from 'react';
-import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, View, Alert } from 'react-native';
+import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, View, Alert, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, BorderRadius } from '@/constants/Theme';
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { useAuth } from '@/contexts/AuthContext';
 import { FirebaseWrapper } from '@/services/firebase/FirebaseWrapper';
 
@@ -23,8 +23,8 @@ export default function GoogleSignInButton({ onSuccess, onError, divider = false
   const { signInWithGoogle } = useAuth();
 
   useEffect(() => {
-    // Check if Firebase is available for Google Sign-In
-    setIsAvailable(FirebaseWrapper.isAvailable());
+    // Google Sign-In is only available on native platforms with Firebase
+    setIsAvailable(Platform.OS !== 'web' && FirebaseWrapper.isAvailable());
   }, []);
 
   const handleGoogleSignIn = async () => {
@@ -38,6 +38,9 @@ export default function GoogleSignInButton({ onSuccess, onError, divider = false
 
     try {
       setIsLoading(true);
+
+      // Dynamically import Google Sign-In SDK (only available on native platforms)
+      const { GoogleSignin } = require('@react-native-google-signin/google-signin');
 
       // Configure Google Sign-In (this should ideally be done once at app startup)
       await GoogleSignin.configure({
