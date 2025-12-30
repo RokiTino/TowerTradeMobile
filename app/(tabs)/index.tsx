@@ -95,9 +95,14 @@ export default function DiscoveryScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        {/* <TowerTradeLogo width={220} /> */}
-          <Image source={require('@/assets/images/logo.png')} style={{ marginTop: 10, width: 220, height: 220, resizeMode: 'contain' }} />
-        <Text style={styles.headerSubtitle}>Premium Real Estate Opportunities</Text>
+        {/* Horizontal Logo Layout */}
+        <View style={styles.logoContainer}>
+          <Image source={require('@/assets/images/logo.png')} style={styles.logoImage} />
+        </View>
+
+        {/* Large Header Text */}
+        <Text style={styles.headerTitle}>Find your next investment</Text>
+
         {aiInsightsLoading && (
           <View style={styles.aiLoadingBanner}>
             <ActivityIndicator size="small" color={Colors.towerGold} />
@@ -136,12 +141,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.md,
     paddingBottom: Spacing.lg,
-    alignItems: 'center',
   },
-  headerSubtitle: {
-    fontSize: Typography.bodySmall,
-    color: Colors.textSecondary,
-    marginTop: Spacing.xs,
+  logoContainer: {
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+  },
+  logoImage: {
+    width: 180,
+    height: 60,
+    resizeMode: 'contain',
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: Typography.bold,
+    color: Colors.ebonyBlack,
+    marginBottom: Spacing.sm,
   },
   aiLoadingBanner: {
     flexDirection: 'row',

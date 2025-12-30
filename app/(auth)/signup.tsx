@@ -19,7 +19,6 @@ import PremiumLoadingOverlay from '@/components/PremiumLoadingOverlay';
 import { FirebaseWrapper } from '@/services/firebase/FirebaseWrapper';
 import { useAuth } from '@/contexts/AuthContext';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
-import { LoginManager, AccessToken } from 'react-native-fbsdk-next';
 
 export default function SignUpScreen() {
   const router = useRouter();
@@ -95,6 +94,12 @@ export default function SignUpScreen() {
   };
 
   const handleFacebookSignIn = async () => {
+    // Facebook SDK is not available on web
+    if (Platform.OS === 'web') {
+      Alert.alert('Not Available', 'Facebook Sign-In is only available on iOS and Android.');
+      return;
+    }
+
     if (!FirebaseWrapper.isAvailable()) {
       Alert.alert('Configuration Required', 'Facebook Sign-In requires Firebase configuration. Please contact support.');
       return;
@@ -103,6 +108,9 @@ export default function SignUpScreen() {
     setSocialLoading('facebook');
     setLoadingMessage('Creating account with Facebook...');
     try {
+      // Dynamically import Facebook SDK (only available on native platforms)
+      const { LoginManager, AccessToken } = require('react-native-fbsdk-next');
+
       const result = await LoginManager.logInWithPermissions(['public_profile', 'email']);
 
       if (result.isCancelled) {

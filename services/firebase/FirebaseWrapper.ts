@@ -1,9 +1,10 @@
 /**
  * Firebase Wrapper
  * Provides safe access to Firebase services with availability checks
+ * Platform-guarded to prevent native module loading on web
  */
 
-import firebase from '@react-native-firebase/app';
+import { Platform } from 'react-native';
 
 export class FirebaseWrapper {
   private static available: boolean | null = null;
@@ -12,11 +13,23 @@ export class FirebaseWrapper {
    * Check if Firebase is available and configured
    */
   static isAvailable(): boolean {
+    // Firebase native modules are not available on web
+    if (Platform.OS === 'web') {
+      if (this.available === null) {
+        console.info('🌐 Running on Web: Firebase native modules not available');
+        console.info('💡 Using Local Mode authentication');
+        this.available = false;
+      }
+      return false;
+    }
+
     if (this.available !== null) {
       return this.available;
     }
 
     try {
+      // Dynamic import to prevent loading on web
+      const firebase = require('@react-native-firebase/app').default;
       const apps = firebase.apps;
       this.available = apps && apps.length > 0;
 
@@ -27,7 +40,7 @@ export class FirebaseWrapper {
         console.info('☁️  Running in Firebase Mode: Cloud services enabled');
       }
 
-      return this.available;
+      return this.available ?? false;
     } catch (error) {
       console.warn('Firebase availability check failed:', error);
       this.available = false;

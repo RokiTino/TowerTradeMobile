@@ -19,7 +19,6 @@ import DividerWithText from '@/components/DividerWithText';
 import PremiumLoadingOverlay from '@/components/PremiumLoadingOverlay';
 import { FirebaseWrapper } from '@/services/firebase/FirebaseWrapper';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
-import { LoginManager, AccessToken } from 'react-native-fbsdk-next';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -88,6 +87,12 @@ export default function LoginScreen() {
   };
 
   const handleFacebookSignIn = async () => {
+    // Facebook SDK is not available on web
+    if (Platform.OS === 'web') {
+      Alert.alert('Not Available', 'Facebook Sign-In is only available on iOS and Android.');
+      return;
+    }
+
     if (!FirebaseWrapper.isAvailable()) {
       Alert.alert('Configuration Required', 'Facebook Sign-In requires Firebase configuration. Please contact support.');
       return;
@@ -96,6 +101,9 @@ export default function LoginScreen() {
     setSocialLoading('facebook');
     setLoadingMessage('Signing in with Facebook...');
     try {
+      // Dynamically import Facebook SDK (only available on native platforms)
+      const { LoginManager, AccessToken } = require('react-native-fbsdk-next');
+
       // Request Facebook login with permissions
       const result = await LoginManager.logInWithPermissions(['public_profile', 'email']);
 
@@ -135,8 +143,11 @@ export default function LoginScreen() {
       >
         {/* Logo and Branding */}
         <View style={styles.header}>
-          <Image source={require('@/assets/images/logo.png')} style={{ marginTop: 12, width: 250, height: 220, resizeMode: 'contain' }} />
+          <Image source={require('@/assets/images/logo.png')} style={{ width: 200, height: 80, resizeMode: 'contain' }} />
         </View>
+
+        {/* Sign In Header */}
+        <Text style={styles.title}>Sign In</Text>
 
         {/* Form */}
         <View style={styles.formContainer}>
@@ -237,7 +248,13 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: Spacing.xxl,
+    marginBottom: Spacing.lg,
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: Typography.bold,
+    color: Colors.ebonyBlack,
+    marginBottom: Spacing.xl,
   },
   formContainer: {
     width: '100%',

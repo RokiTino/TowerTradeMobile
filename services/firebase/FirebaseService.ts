@@ -1,11 +1,9 @@
 /**
  * Firebase Initialization Service
  * Handles Firebase setup and authentication
+ * Platform-guarded to prevent loading on web
  */
 
-import firebase from '@react-native-firebase/app';
-import auth from '@react-native-firebase/auth';
-import firestore from '@react-native-firebase/firestore';
 import { Platform } from 'react-native';
 
 export class FirebaseService {
@@ -17,12 +15,22 @@ export class FirebaseService {
    * This will be called automatically when the app starts
    */
   static async initialize(): Promise<boolean> {
+    // Firebase is not available on web
+    if (Platform.OS === 'web') {
+      console.info('🌐 Firebase Service: Not available on web platform');
+      return false;
+    }
+
     if (this.initialized) {
       console.log('Firebase already initialized');
       return true;
     }
 
     try {
+      // Dynamically import Firebase modules (only on native platforms)
+      const firebase = require('@react-native-firebase/app').default;
+      const auth = require('@react-native-firebase/auth').default;
+
       // Check if Firebase is configured
       const apps = firebase.apps;
 
@@ -51,7 +59,16 @@ export class FirebaseService {
    * Check if Firebase is available
    */
   static isAvailable(): boolean {
-    return this.initialized && firebase.apps.length > 0;
+    if (Platform.OS === 'web') {
+      return false;
+    }
+
+    try {
+      const firebase = require('@react-native-firebase/app').default;
+      return this.initialized && firebase.apps.length > 0;
+    } catch {
+      return false;
+    }
   }
 
   /**
@@ -72,7 +89,12 @@ export class FirebaseService {
    * Sign in with email/password
    */
   static async signIn(email: string, password: string): Promise<any> {
+    if (Platform.OS === 'web') {
+      throw new Error('Firebase Auth is not available on web');
+    }
+
     try {
+      const auth = require('@react-native-firebase/auth').default;
       const userCredential = await auth().signInWithEmailAndPassword(email, password);
       this.currentUser = userCredential.user;
       return userCredential.user;
@@ -86,7 +108,14 @@ export class FirebaseService {
    * Create user with email/password
    */
   static async signUp(email: string, password: string, name: string): Promise<any> {
+    if (Platform.OS === 'web') {
+      throw new Error('Firebase Auth is not available on web');
+    }
+
     try {
+      const auth = require('@react-native-firebase/auth').default;
+      const firestore = require('@react-native-firebase/firestore').default;
+
       const userCredential = await auth().createUserWithEmailAndPassword(email, password);
 
       // Update profile with name
@@ -116,7 +145,12 @@ export class FirebaseService {
    * Sign out
    */
   static async signOut(): Promise<void> {
+    if (Platform.OS === 'web') {
+      throw new Error('Firebase Auth is not available on web');
+    }
+
     try {
+      const auth = require('@react-native-firebase/auth').default;
       await auth().signOut();
       this.currentUser = null;
     } catch (error) {
@@ -129,7 +163,12 @@ export class FirebaseService {
    * Reset password
    */
   static async resetPassword(email: string): Promise<void> {
+    if (Platform.OS === 'web') {
+      throw new Error('Firebase Auth is not available on web');
+    }
+
     try {
+      const auth = require('@react-native-firebase/auth').default;
       await auth().sendPasswordResetEmail(email);
     } catch (error) {
       console.error('Error resetting password:', error);

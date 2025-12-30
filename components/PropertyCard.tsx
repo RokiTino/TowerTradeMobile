@@ -14,13 +14,12 @@ const CARD_WIDTH = width - Spacing.lg * 2;
 export default function PropertyCard({ property, onPress }: PropertyCardProps) {
   const progressPercentage = (property.raisedAmount / property.goalAmount) * 100;
 
+  // Format currency to match design mockup (e.g., "2.000.000$")
   const formatCurrency = (amount: number) => {
-    return amount.toLocaleString('en-US', {
-      style: 'currency',
-      currency: 'USD',
+    return `${amount.toLocaleString('en-US', {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
-    });
+    }).replace(/,/g, '.')}$`;
   };
 
   return (
@@ -38,7 +37,7 @@ export default function PropertyCard({ property, onPress }: PropertyCardProps) {
         <Text style={styles.name}>{property.name}</Text>
         <Text style={styles.goal}>{formatCurrency(property.goalAmount)}</Text>
 
-        {/* Progress Bar */}
+        {/* Progress Bar with Percentage */}
         <View style={styles.progressContainer}>
           <View style={styles.progressBackground}>
             <View
@@ -48,6 +47,7 @@ export default function PropertyCard({ property, onPress }: PropertyCardProps) {
               ]}
             />
           </View>
+          <Text style={styles.progressText}>{Math.round(progressPercentage)}% funded</Text>
         </View>
 
         {property.aiInsight && (
@@ -98,11 +98,17 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.softSlate,
     borderRadius: BorderRadius.sm,
     overflow: 'hidden',
+    marginBottom: Spacing.xs,
   },
   progressFill: {
     height: '100%',
     backgroundColor: Colors.towerGold,
     borderRadius: BorderRadius.sm,
+  },
+  progressText: {
+    fontSize: Typography.bodySmall,
+    color: Colors.textSecondary,
+    fontWeight: Typography.medium,
   },
   aiInsightContainer: {
     marginTop: Spacing.sm,

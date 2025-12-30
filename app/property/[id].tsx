@@ -208,7 +208,7 @@ export default function PropertyDetailScreen() {
             onPress={handleInvest}
             activeOpacity={0.8}
           >
-            <Text style={styles.investButtonText}>INVEST</Text>
+            <Text style={styles.investButtonText}>INVEST NOW</Text>
           </TouchableOpacity>
         </View>
 
@@ -395,15 +395,15 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.md,
   },
   investButton: {
-    backgroundColor: Colors.softSlate,
+    backgroundColor: Colors.towerGold,
     borderRadius: BorderRadius.md,
-    paddingVertical: Spacing.md + 4,
+    paddingVertical: Spacing.md + 6,
     alignItems: 'center',
     justifyContent: 'center',
     ...Shadows.button,
   },
   investButtonText: {
-    color: Colors.ebonyBlack,
+    color: Colors.pureWhite,
     fontSize: Typography.heading4,
     fontWeight: Typography.bold,
     letterSpacing: 2,
