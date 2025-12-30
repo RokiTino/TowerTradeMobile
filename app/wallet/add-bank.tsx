@@ -67,7 +67,7 @@ export default function AddBankScreen() {
         'Your account has been added and is pending verification. This process typically takes 1-2 business days.',
         [{ text: 'OK', onPress: () => router.back() }]
       );
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'Failed to save bank account. Please try again.');
     } finally {
       setLoading(false);
@@ -252,7 +252,7 @@ export default function AddBankScreen() {
             <View style={styles.verificationTextContainer}>
               <Text style={styles.verificationTitle}>Manual Verification</Text>
               <Text style={styles.verificationText}>
-                After adding your account, we'll initiate a verification process. This typically takes 1-2 business days. You'll receive two small deposits that you'll need to confirm.
+                After adding your account, we&apos;ll initiate a verification process. This typically takes 1-2 business days. You&apos;ll receive two small deposits that you&apos;ll need to confirm.
               </Text>
             </View>
           </View>

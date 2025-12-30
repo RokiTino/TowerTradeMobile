@@ -27,6 +27,7 @@ export default function PortfolioScreen() {
   useEffect(() => {
     loadTransactions();
     generateAIAnalysis();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadTransactions = async () => {

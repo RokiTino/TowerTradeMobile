@@ -33,13 +33,13 @@ export default function CheckoutModal({ visible, property, amount, onClose, onSu
   const [step, setStep] = useState<CheckoutStep>('confirmation');
   const [paymentMethods, setPaymentMethods] = useState<(CreditCard | BankAccount)[]>([]);
   const [selectedPaymentId, setSelectedPaymentId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (visible) {
       loadPaymentMethods();
       checkFirstTimeInvestor();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
   const loadPaymentMethods = async () => {
@@ -129,7 +129,6 @@ export default function CheckoutModal({ visible, property, amount, onClose, onSu
     if (!property || !selectedPaymentId) return;
 
     setStep('processing');
-    setLoading(true);
 
     try {
       // Simulate payment processing
@@ -157,11 +156,9 @@ export default function CheckoutModal({ visible, property, amount, onClose, onSu
       }
 
       onSuccess(transaction);
-    } catch (error) {
+    } catch {
       Alert.alert('Transaction Failed', 'Please try again later.');
       setStep('payment');
-    } finally {
-      setLoading(false);
     }
   };
 

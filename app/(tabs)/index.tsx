@@ -15,7 +15,6 @@ import { mockProperties } from '@/data/mockProperties';
 import { Property } from '@/types/property';
 import { Colors, Typography, Spacing, BorderRadius } from '@/constants/Theme';
 import { generateBatchInsights } from '@/services/aiInsightService';
-import TowerTradeLogo from '@/components/TowerTradeLogo';
 
 export default function DiscoveryScreen() {
   const router = useRouter();

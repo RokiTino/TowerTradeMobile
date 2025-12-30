@@ -127,7 +127,7 @@ export default function AddCardScreen() {
       Alert.alert('Success', 'Card added successfully', [
         { text: 'OK', onPress: () => router.back() },
       ]);
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'Failed to save card. Please try again.');
     } finally {
       setLoading(false);

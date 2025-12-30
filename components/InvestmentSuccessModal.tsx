@@ -66,6 +66,7 @@ export default function InvestmentSuccessModal({
       fadeAnim.setValue(0);
       checkmarkScale.setValue(0);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
   const formatCurrency = (amount: number) => {
