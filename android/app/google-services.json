@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "253066400729",
+    "project_id": "towertrader-56483",
+    "storage_bucket": "towertrader-56483.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:253066400729:android:4a1a3141b2b3cf8f823fc8",
+        "android_client_info": {
+          "package_name": "com.towertrade.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "253066400729-ci4vlbmo1mthqbgd7lt202r42lda9jom.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDJjTixbZ0hInT6Rmj1gRyeBHrUps6aE4I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "253066400729-ci4vlbmo1mthqbgd7lt202r42lda9jom.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

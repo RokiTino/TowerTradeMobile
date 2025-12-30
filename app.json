@@ -17,7 +17,7 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.robertinod.investmate"
+      "package": "com.towertrade.app"
     },
     "web": {
       "bundler": "metro",
