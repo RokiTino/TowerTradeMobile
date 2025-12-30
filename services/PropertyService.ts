@@ -1,20 +1,30 @@
 /**
  * Property Service
  * Provides property data with real-time Firebase sync when available
+ * Uses dynamic imports to prevent loading Firebase modules on web
  */
 
 import { Property } from '@/types/property';
-import { FirebasePropertyRepository } from './repositories/FirebasePropertyRepository';
 import { mockProperties } from '@/data/mockProperties';
 import { AuthService } from './auth/AuthService';
+import { Platform } from 'react-native';
 
 export class PropertyService {
-  private static firebaseRepo: FirebasePropertyRepository | null = null;
+  private static firebaseRepo: any = null;
 
   /**
    * Initialize Firebase repository if user is authenticated
    */
   static initializeForUser(userId: string) {
+    // Prevent Firebase loading on web
+    if (Platform.OS === 'web') {
+      console.info('🌐 Web platform detected: Skipping Firebase initialization for properties');
+      this.firebaseRepo = null;
+      return;
+    }
+
+    // Dynamic import to prevent loading on web
+    const { FirebasePropertyRepository } = require('./repositories/FirebasePropertyRepository');
     this.firebaseRepo = new FirebasePropertyRepository(userId);
   }
 
@@ -63,7 +73,7 @@ export class PropertyService {
    */
   static subscribeToProperties(callback: (properties: Property[]) => void): () => void {
     if (this.firebaseRepo) {
-      return this.firebaseRepo.subscribeToProperties((properties) => {
+      return this.firebaseRepo.subscribeToProperties((properties: Property[]) => {
         // If Firebase has properties, use them; otherwise fall back to mock
         callback(properties.length > 0 ? properties : mockProperties);
       });

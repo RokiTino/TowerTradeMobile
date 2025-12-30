@@ -28,8 +28,23 @@ export class FirebaseService {
 
     try {
       // Dynamically import Firebase modules (only on native platforms)
-      const firebase = require('@react-native-firebase/app').default;
-      const auth = require('@react-native-firebase/auth').default;
+      // Using separate requires to help Metro bundler with tree-shaking
+      let firebase: any = null;
+      let auth: any = null;
+
+      try {
+        firebase = require('@react-native-firebase/app').default;
+      } catch (e) {
+        console.warn('Could not load @react-native-firebase/app:', e);
+        return false;
+      }
+
+      try {
+        auth = require('@react-native-firebase/auth').default;
+      } catch (e) {
+        console.warn('Could not load @react-native-firebase/auth:', e);
+        return false;
+      }
 
       // Check if Firebase is configured
       const apps = firebase.apps;
