@@ -21,13 +21,13 @@ import { useAuth } from '@/contexts/AuthContext';
 
 export default function SignUpScreen() {
   const router = useRouter();
-  const { signUp, signInWithGoogle, signInWithFacebook } = useAuth();
+  const { signUp, signInWithGoogle } = useAuth();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [socialLoading, setSocialLoading] = useState<'google' | 'facebook' | null>(null);
+  const [socialLoading, setSocialLoading] = useState<'google' | null>(null);
   const [loadingMessage, setLoadingMessage] = useState('Creating account...');
 
   const handleSignUp = async () => {
@@ -59,9 +59,13 @@ export default function SignUpScreen() {
   };
 
   const handleGoogleSignIn = async () => {
-    // Google Sign-In is not available on web
+    // On web, show a professional message about mobile optimization
     if (Platform.OS === 'web') {
-      Alert.alert('Not Available', 'Google Sign-In is only available on iOS and Android.');
+      Alert.alert(
+        'Mobile Experience Recommended',
+        'Google Sign-In is currently optimized for our mobile app. Please use Email/Password to continue on web, or download the TowerTrade app for the full social login experience.',
+        [{ text: 'OK', style: 'default' }]
+      );
       return;
     }
 
@@ -101,46 +105,6 @@ export default function SignUpScreen() {
     }
   };
 
-  const handleFacebookSignIn = async () => {
-    // Facebook SDK is not available on web
-    if (Platform.OS === 'web') {
-      Alert.alert('Not Available', 'Facebook Sign-In is only available on iOS and Android.');
-      return;
-    }
-
-    if (!FirebaseWrapper.isAvailable()) {
-      Alert.alert('Configuration Required', 'Facebook Sign-In requires Firebase configuration. Please contact support.');
-      return;
-    }
-
-    setSocialLoading('facebook');
-    setLoadingMessage('Creating account with Facebook...');
-    try {
-      // Dynamically import Facebook SDK (only available on native platforms)
-      const { LoginManager, AccessToken } = require('react-native-fbsdk-next');
-
-      const result = await LoginManager.logInWithPermissions(['public_profile', 'email']);
-
-      if (result.isCancelled) {
-        throw new Error('User cancelled Facebook login');
-      }
-
-      const data = await AccessToken.getCurrentAccessToken();
-      if (!data) {
-        throw new Error('Failed to get Facebook access token');
-      }
-
-      await signInWithFacebook(data.accessToken);
-      router.replace('/(tabs)');
-    } catch (error: any) {
-      console.error('Facebook Sign-In Error:', error);
-      if (error.message !== 'User cancelled Facebook login') {
-        Alert.alert('Facebook Sign-In Failed', error.message || 'Failed to sign in with Facebook. Please try again.');
-      }
-    } finally {
-      setSocialLoading(null);
-    }
-  };
 
   return (
     <KeyboardAvoidingView
@@ -225,28 +189,17 @@ export default function SignUpScreen() {
             </Text>
           </TouchableOpacity>
 
-          {/* Social Login Section (only shows if Firebase is available) */}
-          {FirebaseWrapper.isAvailable() && (
-            <>
-              <DividerWithText text="or continue with" />
+          {/* Social Login Section */}
+          <>
+            <DividerWithText text="or continue with" />
 
-              <SocialLoginButton
-                provider="google"
-                onPress={handleGoogleSignIn}
-                loading={socialLoading === 'google'}
-                disabled={socialLoading !== null}
-              />
-
-              <View style={styles.socialButtonSpacing} />
-
-              <SocialLoginButton
-                provider="facebook"
-                onPress={handleFacebookSignIn}
-                loading={socialLoading === 'facebook'}
-                disabled={socialLoading !== null}
-              />
-            </>
-          )}
+            <SocialLoginButton
+              provider="google"
+              onPress={handleGoogleSignIn}
+              loading={socialLoading === 'google'}
+              disabled={socialLoading !== null}
+            />
+          </>
         </View>
 
         {/* Login Link */}

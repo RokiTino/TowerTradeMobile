@@ -1,30 +1,54 @@
 /**
  * Firebase Implementation of Payment Repository
  * Uses Firebase Firestore for cloud-based data persistence
+ * Platform-guarded to prevent loading native modules on web
  */
 
-import firestore from '@react-native-firebase/firestore';
+import { Platform } from 'react-native';
+import { FirebaseWrapper } from '../firebase/FirebaseWrapper';
 import { IPaymentRepository } from './IPaymentRepository';
 import { CreditCard, BankAccount, Transaction, InvestorAgreement } from '@/types/payment';
 
 export class FirebasePaymentRepository implements IPaymentRepository {
   private userId: string;
+  private firestore: any;
 
   constructor(userId: string) {
     this.userId = userId;
+    // Lazy initialization - only get firestore when needed
+    this.firestore = null;
+  }
+
+  /**
+   * Get Firestore instance (lazy initialization)
+   */
+  private getFirestore() {
+    if (!this.firestore) {
+      this.firestore = FirebaseWrapper.getFirestore();
+    }
+    return this.firestore;
+  }
+
+  /**
+   * Get Firestore FieldValue for server timestamps
+   */
+  private getFieldValue() {
+    const firestore = this.getFirestore();
+    return firestore.constructor.FieldValue || firestore.FieldValue;
   }
 
   // Helper to get user-specific collection reference
   private getUserCollection(collectionName: string) {
-    return firestore().collection('users').doc(this.userId).collection(collectionName);
+    return this.getFirestore().collection('users').doc(this.userId).collection(collectionName);
   }
 
   // Credit Cards
   async saveCreditCard(card: CreditCard): Promise<void> {
     try {
+      const FieldValue = this.getFieldValue();
       await this.getUserCollection('creditCards').doc(card.id).set({
         ...card,
-        createdAt: firestore.FieldValue.serverTimestamp(),
+        createdAt: FieldValue.serverTimestamp(),
       });
     } catch (error) {
       console.error('Error saving credit card to Firebase:', error);
@@ -38,7 +62,7 @@ export class FirebasePaymentRepository implements IPaymentRepository {
         .orderBy('createdAt', 'desc')
         .get();
 
-      return snapshot.docs.map((doc) => {
+      return snapshot.docs.map((doc: any) => {
         const data = doc.data();
         return {
           ...data,
@@ -64,9 +88,10 @@ export class FirebasePaymentRepository implements IPaymentRepository {
   // Bank Accounts
   async saveBankAccount(account: BankAccount): Promise<void> {
     try {
+      const FieldValue = this.getFieldValue();
       await this.getUserCollection('bankAccounts').doc(account.id).set({
         ...account,
-        createdAt: firestore.FieldValue.serverTimestamp(),
+        createdAt: FieldValue.serverTimestamp(),
       });
     } catch (error) {
       console.error('Error saving bank account to Firebase:', error);
@@ -80,7 +105,7 @@ export class FirebasePaymentRepository implements IPaymentRepository {
         .orderBy('createdAt', 'desc')
         .get();
 
-      return snapshot.docs.map((doc) => {
+      return snapshot.docs.map((doc: any) => {
         const data = doc.data();
         return {
           ...data,
@@ -106,9 +131,10 @@ export class FirebasePaymentRepository implements IPaymentRepository {
   // Transactions
   async saveTransaction(transaction: Transaction): Promise<void> {
     try {
+      const FieldValue = this.getFieldValue();
       await this.getUserCollection('transactions').doc(transaction.id).set({
         ...transaction,
-        date: firestore.FieldValue.serverTimestamp(),
+        date: FieldValue.serverTimestamp(),
       });
     } catch (error) {
       console.error('Error saving transaction to Firebase:', error);
@@ -122,7 +148,7 @@ export class FirebasePaymentRepository implements IPaymentRepository {
         .orderBy('date', 'desc')
         .get();
 
-      return snapshot.docs.map((doc) => {
+      return snapshot.docs.map((doc: any) => {
         const data = doc.data();
         return {
           ...data,
@@ -158,9 +184,10 @@ export class FirebasePaymentRepository implements IPaymentRepository {
     status: Transaction['status']
   ): Promise<void> {
     try {
+      const FieldValue = this.getFieldValue();
       await this.getUserCollection('transactions').doc(transactionId).update({
         status,
-        updatedAt: firestore.FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
       });
     } catch (error) {
       console.error('Error updating transaction status in Firebase:', error);
@@ -171,13 +198,14 @@ export class FirebasePaymentRepository implements IPaymentRepository {
   // Investor Agreement
   async saveInvestorAgreement(agreement: InvestorAgreement): Promise<void> {
     try {
-      await firestore()
+      const FieldValue = this.getFieldValue();
+      await this.getFirestore()
         .collection('users')
         .doc(this.userId)
         .update({
           investorAgreement: {
             ...agreement,
-            acceptedAt: firestore.FieldValue.serverTimestamp(),
+            acceptedAt: FieldValue.serverTimestamp(),
           },
         });
     } catch (error) {
@@ -188,7 +216,7 @@ export class FirebasePaymentRepository implements IPaymentRepository {
 
   async getInvestorAgreement(): Promise<InvestorAgreement | null> {
     try {
-      const doc = await firestore().collection('users').doc(this.userId).get();
+      const doc = await this.getFirestore().collection('users').doc(this.userId).get();
       const data = doc.data();
 
       if (!data?.investorAgreement) return null;
@@ -213,9 +241,9 @@ export class FirebasePaymentRepository implements IPaymentRepository {
       const snapshot = await collection.get();
 
       // Create batch update
-      const batch = firestore().batch();
+      const batch = this.getFirestore().batch();
 
-      snapshot.docs.forEach((doc) => {
+      snapshot.docs.forEach((doc: any) => {
         batch.update(doc.ref, {
           isDefault: doc.id === id,
         });

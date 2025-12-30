@@ -109,28 +109,6 @@ export class AuthService {
   }
 
   /**
-   * Sign in with Facebook (uses Facebook SDK access token)
-   */
-  static async signInWithFacebook(accessToken: string): Promise<AuthUser> {
-    if (!this.isFirebaseAvailable()) {
-      throw new Error('Facebook Sign-In requires Firebase configuration');
-    }
-
-    try {
-      const auth = FirebaseWrapper.getAuth();
-      const { FacebookAuthProvider } = require('@react-native-firebase/auth');
-      const facebookCredential = FacebookAuthProvider.credential(accessToken);
-      const userCredential = await auth.signInWithCredential(facebookCredential);
-      const authUser = this.mapFirebaseUser(userCredential.user);
-      await this.saveUserSession(authUser);
-      return authUser;
-    } catch (error: any) {
-      console.error('Facebook sign-in error:', error);
-      throw new Error(this.getAuthErrorMessage(error.code));
-    }
-  }
-
-  /**
    * Sign out current user
    */
   static async signOutUser(): Promise<void> {
