@@ -6,6 +6,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   RefreshControl,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -78,7 +79,8 @@ export default function DiscoveryScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <TowerTradeLogo width={220} />
+        {/* <TowerTradeLogo width={220} /> */}
+          <Image source={require('@/assets/images/logo.png')} style={{ marginTop: 10, width: 220, height: 220, resizeMode: 'contain' }} />
         <Text style={styles.headerSubtitle}>Premium Real Estate Opportunities</Text>
         {aiInsightsLoading && (
           <View style={styles.aiLoadingBanner}>
