@@ -11,21 +11,6 @@ let firebaseApp: any = null;
 let firebaseAuth: any = null;
 let firebaseFirestore: any = null;
 
-/**
- * Safely require a native module only on native platforms
- */
-function safeRequireNative(moduleName: string): any {
-  if (Platform.OS === 'web') {
-    return null;
-  }
-  try {
-    return require(moduleName);
-  } catch (error) {
-    console.warn(`Failed to require ${moduleName}:`, error);
-    return null;
-  }
-}
-
 export class FirebaseWrapper {
   private static available: boolean | null = null;
 
@@ -48,10 +33,16 @@ export class FirebaseWrapper {
     }
 
     try {
-      // Safe dynamic import for native platforms only
+      // Load Firebase App module (only on native platforms)
+      // Metro requires static strings for require()
       if (!firebaseApp) {
-        const module = safeRequireNative('@react-native-firebase/app');
-        firebaseApp = module ? module.default : null;
+        try {
+          firebaseApp = require('@react-native-firebase/app').default;
+        } catch (e) {
+          console.warn('Firebase App module not found:', e);
+          this.available = false;
+          return false;
+        }
       }
 
       if (!firebaseApp) {
@@ -86,9 +77,15 @@ export class FirebaseWrapper {
     }
 
     try {
+      // Load Firebase Auth module (only on native platforms)
+      // Metro requires static strings for require()
       if (!firebaseAuth) {
-        const module = safeRequireNative('@react-native-firebase/auth');
-        firebaseAuth = module ? module.default : null;
+        try {
+          firebaseAuth = require('@react-native-firebase/auth').default;
+        } catch (e) {
+          console.warn('Firebase Auth module not found:', e);
+          throw new Error('Firebase Auth module not available');
+        }
       }
 
       if (!firebaseAuth) {
@@ -111,9 +108,15 @@ export class FirebaseWrapper {
     }
 
     try {
+      // Load Firebase Firestore module (only on native platforms)
+      // Metro requires static strings for require()
       if (!firebaseFirestore) {
-        const module = safeRequireNative('@react-native-firebase/firestore');
-        firebaseFirestore = module ? module.default : null;
+        try {
+          firebaseFirestore = require('@react-native-firebase/firestore').default;
+        } catch (e) {
+          console.warn('Firebase Firestore module not found:', e);
+          throw new Error('Firebase Firestore module not available');
+        }
       }
 
       if (!firebaseFirestore) {
