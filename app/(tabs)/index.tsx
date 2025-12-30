@@ -11,10 +11,10 @@ import {
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import PropertyCard from '@/components/PropertyCard';
-import { mockProperties } from '@/data/mockProperties';
 import { Property } from '@/types/property';
 import { Colors, Typography, Spacing, BorderRadius } from '@/constants/Theme';
 import { generateBatchInsights } from '@/services/aiInsightService';
+import { PropertyService } from '@/services/PropertyService';
 
 export default function DiscoveryScreen() {
   const router = useRouter();
@@ -25,25 +25,42 @@ export default function DiscoveryScreen() {
 
   useEffect(() => {
     loadProperties();
+
+    // Subscribe to real-time property updates
+    const unsubscribe = PropertyService.subscribeToProperties((updatedProperties) => {
+      setProperties((currentProperties) => {
+        // Merge updated properties with existing AI insights
+        return updatedProperties.map((prop) => {
+          const existing = currentProperties.find((p) => p.id === prop.id);
+          return {
+            ...prop,
+            aiInsight: existing?.aiInsight || prop.aiInsight || 'Investment analysis pending.',
+          };
+        });
+      });
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const loadProperties = async () => {
-    // First, load properties without AI insights
-    setProperties(mockProperties);
+    // First, load properties from service
+    const loadedProperties = await PropertyService.getProperties();
+    setProperties(loadedProperties);
     setIsLoading(false);
 
     // Then generate AI insights in the background
     setAiInsightsLoading(true);
     try {
-      const insights = await generateBatchInsights(mockProperties);
+      const insights = await generateBatchInsights(loadedProperties);
 
       // Update properties with AI insights
-      const propertiesWithInsights = mockProperties.map((property) => ({
-        ...property,
-        aiInsight: insights.get(property.id) || 'Investment analysis pending.',
-      }));
-
-      setProperties(propertiesWithInsights);
+      setProperties((currentProperties) =>
+        currentProperties.map((property) => ({
+          ...property,
+          aiInsight: insights.get(property.id) || 'Investment analysis pending.',
+        }))
+      );
     } catch (error) {
       console.error('Error loading AI insights:', error);
     } finally {

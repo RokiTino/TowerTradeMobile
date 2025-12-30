@@ -8,14 +8,17 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Alert, Image,
+  Alert,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Colors, Typography, Spacing, BorderRadius } from '@/constants/Theme';
-// import TowerTradeLogo from '@/components/TowerTradeLogo';
+import { useAuth } from '@/contexts/AuthContext';
+import GoogleSignInButton from '@/components/GoogleSignInButton';
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -27,12 +30,20 @@ export default function LoginScreen() {
     }
 
     setIsLoading(true);
-    // Simulate login - in production, this would call your auth API
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      await signIn(email, password);
       // Navigate to main app
       router.replace('/(tabs)');
-    }, 1000);
+    } catch (error: any) {
+      Alert.alert('Login Failed', error.message || 'Please check your credentials and try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleSignInSuccess = () => {
+    // Navigate to main app after successful Google Sign-In
+    router.replace('/(tabs)');
   };
 
   return (
@@ -95,6 +106,16 @@ export default function LoginScreen() {
               {isLoading ? 'LOGGING IN...' : 'LOG IN'}
             </Text>
           </TouchableOpacity>
+
+          {/* Divider */}
+          <View style={styles.dividerContainer}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>or</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          {/* Google Sign-In */}
+          <GoogleSignInButton onSuccess={handleGoogleSignInSuccess} />
         </View>
 
         {/* Sign Up Link */}
@@ -184,5 +205,21 @@ const styles = StyleSheet.create({
     fontSize: Typography.body,
     color: Colors.towerGold,
     fontWeight: Typography.semiBold,
+  },
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: Spacing.lg,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: Colors.softSlate,
+  },
+  dividerText: {
+    marginHorizontal: Spacing.md,
+    fontSize: Typography.bodySmall,
+    color: Colors.textSecondary,
+    fontWeight: Typography.medium,
   },
 });
