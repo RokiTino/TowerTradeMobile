@@ -6,6 +6,7 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FirebaseWrapper } from '../firebase/FirebaseWrapper';
+import { UniversalFirebaseWrapper } from '../firebase/UniversalFirebaseWrapper';
 
 const AUTH_TOKEN_KEY = '@towertrade_auth_token';
 const USER_DATA_KEY = '@towertrade_user_data';
@@ -87,20 +88,26 @@ export class AuthService {
   }
 
   /**
-   * Sign in with Google (uses Google Sign-In SDK credentials)
+   * Sign in with Google (universal - works on web and native)
    */
-  static async signInWithGoogle(idToken: string): Promise<AuthUser> {
-    if (!this.isFirebaseAvailable()) {
+  static async signInWithGoogle(idToken?: string): Promise<AuthUser> {
+    if (!UniversalFirebaseWrapper.isAvailable()) {
       throw new Error('Google Sign-In requires Firebase configuration');
     }
 
     try {
-      const auth = FirebaseWrapper.getAuth();
-      const { GoogleAuthProvider } = require('@react-native-firebase/auth');
-      const googleCredential = GoogleAuthProvider.credential(idToken);
-      const userCredential = await auth.signInWithCredential(googleCredential);
-      const authUser = this.mapFirebaseUser(userCredential.user);
+      // Universal Firebase wrapper handles both web and native
+      const user = await UniversalFirebaseWrapper.signInWithGoogle();
+
+      if (!user) {
+        // Redirect case (web) - user will be returned after redirect completes
+        throw new Error('Authentication in progress. Please wait...');
+      }
+
+      const authUser = this.mapFirebaseUser(user);
       await this.saveUserSession(authUser);
+
+      console.info('✅ Google Sign-In successful');
       return authUser;
     } catch (error: any) {
       console.error('Google sign-in error:', error);

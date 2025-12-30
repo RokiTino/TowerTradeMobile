@@ -47,52 +47,29 @@ export default function LoginScreen() {
   };
 
   const handleGoogleSignIn = async () => {
-    // On web, show a professional message about mobile optimization
-    if (Platform.OS === 'web') {
-      Alert.alert(
-        'Mobile Experience Recommended',
-        'Google Sign-In is currently optimized for our mobile app. Please use Email/Password to continue on web, or download the TowerTrade app for the full social login experience.',
-        [{ text: 'OK', style: 'default' }]
-      );
-      return;
-    }
-
-    if (!FirebaseWrapper.isAvailable()) {
-      Alert.alert('Configuration Required', 'Google Sign-In requires Firebase configuration. Please contact support.');
-      return;
-    }
-
     setSocialLoading('google');
     setLoadingMessage('Signing in with Google...');
+
     try {
-      // Dynamically import Google Sign-In SDK (only available on native platforms)
-      const { GoogleSignin } = require('@react-native-google-signin/google-signin');
+      // Universal Google Sign-In (works on all platforms)
+      await signInWithGoogle();
 
-      // Configure Google Sign-In
-      await GoogleSignin.hasPlayServices();
-      const response = await GoogleSignin.signIn();
-
-      // Check if sign-in was successful
-      if (response.type === 'cancelled') {
-        return; // User cancelled, don't show error
-      }
-
-      // Get the ID token from the User data
-      const idToken = response.data.idToken;
-      if (!idToken) {
-        throw new Error('Failed to get Google ID token');
-      }
-
-      // Sign in with Firebase using the ID token
-      await signInWithGoogle(idToken);
-
-      // Navigate to main app
+      // Navigate to main app on success
       router.replace('/(tabs)');
     } catch (error: any) {
       console.error('Google Sign-In Error:', error);
-      if (error.code !== '-5') { // -5 is user cancellation
-        Alert.alert('Google Sign-In Failed', error.message || 'Failed to sign in with Google. Please try again.');
+
+      // Handle user cancellation gracefully
+      if (error.message?.includes('cancelled') || error.message?.includes('canceled') || error.code === '-5') {
+        // User cancelled, don't show error
+        return;
       }
+
+      // Show error alert with friendly message
+      Alert.alert(
+        'Google Sign-In Failed',
+        error.message || 'Failed to sign in with Google. Please try again.'
+      );
     } finally {
       setSocialLoading(null);
     }

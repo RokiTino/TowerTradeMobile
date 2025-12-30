@@ -1,22 +1,45 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Stack } from 'expo-router';
-import { Platform } from 'react-native';
+import { Platform, ActivityIndicator, View, StyleSheet } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from '@/contexts/AuthContext';
-import { FirebaseWrapper } from '@/services/firebase/FirebaseWrapper';
+import { UniversalFirebaseWrapper } from '@/services/firebase/UniversalFirebaseWrapper';
+import { Colors } from '@/constants/Theme';
 
 export default function RootLayout() {
+  const [firebaseInitialized, setFirebaseInitialized] = useState(false);
+
   useEffect(() => {
-    // Configure Google Sign-In when Firebase is available (not on web)
-    if (Platform.OS !== 'web' && FirebaseWrapper.isAvailable()) {
-      // Dynamic import to prevent loading on web
-      const { GoogleSignin } = require('@react-native-google-signin/google-signin');
-      GoogleSignin.configure({
-        webClientId: '253066400729-ci4vlbmo1mthqbgd7lt202r42lda9jom.apps.googleusercontent.com',
-        offlineAccess: true,
-      });
-    }
+    // Initialize Firebase for all platforms (web + native)
+    const initializeFirebase = async () => {
+      try {
+        console.info('🚀 Initializing Firebase Universal Wrapper...');
+        const success = await UniversalFirebaseWrapper.initialize();
+
+        if (success) {
+          console.info('✅ Firebase initialized successfully');
+        } else {
+          console.warn('⚠️  Firebase initialization failed, falling back to Local Mode');
+        }
+
+        setFirebaseInitialized(true);
+      } catch (error) {
+        console.error('❌ Firebase initialization error:', error);
+        setFirebaseInitialized(true); // Allow app to continue in Local Mode
+      }
+    };
+
+    initializeFirebase();
   }, []);
+
+  // Show premium loading state while Firebase initializes
+  if (!firebaseInitialized) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={Colors.towerGold} />
+      </View>
+    );
+  }
 
   return (
     <SafeAreaProvider>
@@ -36,3 +59,12 @@ export default function RootLayout() {
     </SafeAreaProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.pureWhite,
+  },
+});

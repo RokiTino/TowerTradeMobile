@@ -14,7 +14,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
-  signInWithGoogle: (idToken: string) => Promise<void>;
+  signInWithGoogle: (idToken?: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -75,7 +75,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
-  const signInWithGoogle = async (idToken: string) => {
+  const signInWithGoogle = async (idToken?: string) => {
     try {
       const authUser = await AuthService.signInWithGoogle(idToken);
       setUser(authUser);

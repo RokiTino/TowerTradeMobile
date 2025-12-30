@@ -1,51 +1,48 @@
 /**
  * Property Service
  * Provides property data with real-time Firebase sync when available
- * Uses dynamic imports to prevent loading Firebase modules on web
+ * Universal support for both web and native platforms
  */
 
 import { Property } from '@/types/property';
 import { mockProperties } from '@/data/mockProperties';
-import { AuthService } from './auth/AuthService';
-import { Platform } from 'react-native';
+import { UniversalFirebaseWrapper } from './firebase/UniversalFirebaseWrapper';
+import { UniversalFirestorePropertyRepository } from './repositories/UniversalFirestorePropertyRepository';
 
 export class PropertyService {
-  private static firebaseRepo: any = null;
+  private static firestoreRepo: UniversalFirestorePropertyRepository | null = null;
 
   /**
-   * Initialize Firebase repository if user is authenticated
+   * Initialize Firestore repository if Firebase is available
    */
   static initializeForUser(userId: string) {
-    // Prevent Firebase loading on web
-    if (Platform.OS === 'web') {
-      console.info('🌐 Web platform detected: Skipping Firebase initialization for properties');
-      this.firebaseRepo = null;
-      return;
+    if (UniversalFirebaseWrapper.isAvailable()) {
+      this.firestoreRepo = new UniversalFirestorePropertyRepository(userId);
+      console.info('☁️  Property Service: Firestore repository initialized');
+    } else {
+      console.info('📱 Property Service: Using mock data (Firebase not available)');
+      this.firestoreRepo = null;
     }
-
-    // Dynamic import to prevent loading on web
-    const { FirebasePropertyRepository } = require('./repositories/FirebasePropertyRepository');
-    this.firebaseRepo = new FirebasePropertyRepository(userId);
   }
 
   /**
    * Reset repository (on logout)
    */
   static reset() {
-    this.firebaseRepo = null;
+    this.firestoreRepo = null;
   }
 
   /**
-   * Get properties (Firebase if available, otherwise mock data)
+   * Get properties (Firestore if available, otherwise mock data)
    */
   static async getProperties(): Promise<Property[]> {
-    if (this.firebaseRepo) {
+    if (this.firestoreRepo) {
       try {
-        const properties = await this.firebaseRepo.getProperties();
-        // If Firebase has properties, use them; otherwise fall back to mock
+        const properties = await this.firestoreRepo.getProperties();
+        // If Firestore has properties, use them; otherwise fall back to mock
         return properties.length > 0 ? properties : mockProperties;
       } catch (error) {
-        console.error('Error fetching from Firebase, using mock data:', error);
+        console.error('Error fetching from Firestore, using mock data:', error);
         return mockProperties;
       }
     }
@@ -56,11 +53,11 @@ export class PropertyService {
    * Get property by ID
    */
   static async getPropertyById(propertyId: string): Promise<Property | null> {
-    if (this.firebaseRepo) {
+    if (this.firestoreRepo) {
       try {
-        return await this.firebaseRepo.getPropertyById(propertyId);
+        return await this.firestoreRepo.getPropertyById(propertyId);
       } catch (error) {
-        console.error('Error fetching property from Firebase:', error);
+        console.error('Error fetching property from Firestore:', error);
       }
     }
     // Fallback to mock data
@@ -68,28 +65,31 @@ export class PropertyService {
   }
 
   /**
-   * Subscribe to real-time property updates
+   * Subscribe to real-time property updates (Live)
    * Returns unsubscribe function
    */
   static subscribeToProperties(callback: (properties: Property[]) => void): () => void {
-    if (this.firebaseRepo) {
-      return this.firebaseRepo.subscribeToProperties((properties: Property[]) => {
-        // If Firebase has properties, use them; otherwise fall back to mock
+    if (this.firestoreRepo) {
+      console.info('📡 Subscribing to live property updates from Firestore...');
+      return this.firestoreRepo.subscribeToProperties((properties: Property[]) => {
+        // If Firestore has properties, use them; otherwise fall back to mock
         callback(properties.length > 0 ? properties : mockProperties);
       });
     }
 
-    // If no Firebase, just call callback with mock data once
+    // If no Firestore, just call callback with mock data once
+    console.info('📱 Using mock property data (Firestore not available)');
     callback(mockProperties);
     return () => {}; // No-op unsubscribe
   }
 
   /**
-   * Subscribe to single property updates
+   * Subscribe to single property updates (Live)
    */
   static subscribeToProperty(propertyId: string, callback: (property: Property | null) => void): () => void {
-    if (this.firebaseRepo) {
-      return this.firebaseRepo.subscribeToProperty(propertyId, callback);
+    if (this.firestoreRepo) {
+      console.info(`📡 Subscribing to live updates for property ${propertyId}...`);
+      return this.firestoreRepo.subscribeToProperty(propertyId, callback);
     }
 
     // Fallback to mock data
@@ -102,13 +102,27 @@ export class PropertyService {
    * Get user's invested properties
    */
   static async getUserInvestedProperties(): Promise<Property[]> {
-    if (this.firebaseRepo) {
+    if (this.firestoreRepo) {
       try {
-        return await this.firebaseRepo.getUserInvestedProperties();
+        return await this.firestoreRepo.getUserInvestedProperties();
       } catch (error) {
         console.error('Error fetching user invested properties:', error);
       }
     }
     return [];
+  }
+
+  /**
+   * Update property funding after investment
+   */
+  static async updatePropertyFunding(propertyId: string, investmentAmount: number): Promise<void> {
+    if (this.firestoreRepo) {
+      try {
+        await this.firestoreRepo.updatePropertyFunding(propertyId, investmentAmount);
+      } catch (error) {
+        console.error('Error updating property funding:', error);
+        throw error;
+      }
+    }
   }
 }
