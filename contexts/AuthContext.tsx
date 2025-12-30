@@ -15,6 +15,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
   signInWithGoogle: (idToken: string) => Promise<void>;
+  signInWithFacebook: (accessToken: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -84,6 +85,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
+  const signInWithFacebook = async (accessToken: string) => {
+    try {
+      const authUser = await AuthService.signInWithFacebook(accessToken);
+      setUser(authUser);
+    } catch (error) {
+      throw error;
+    }
+  };
+
   const signOut = async () => {
     try {
       await AuthService.signOutUser();
@@ -100,6 +110,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     signIn,
     signUp,
     signInWithGoogle,
+    signInWithFacebook,
     signOut,
   };
 

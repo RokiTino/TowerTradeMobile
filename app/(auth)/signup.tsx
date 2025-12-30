@@ -13,14 +13,24 @@ import {
 import { useRouter } from 'expo-router';
 import { Colors, Typography, Spacing, BorderRadius } from '@/constants/Theme';
 import TowerTradeLogo from '@/components/TowerTradeLogo';
+import SocialLoginButton from '@/components/SocialLoginButton';
+import DividerWithText from '@/components/DividerWithText';
+import PremiumLoadingOverlay from '@/components/PremiumLoadingOverlay';
+import { FirebaseWrapper } from '@/services/firebase/FirebaseWrapper';
+import { useAuth } from '@/contexts/AuthContext';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import { LoginManager, AccessToken } from 'react-native-fbsdk-next';
 
 export default function SignUpScreen() {
   const router = useRouter();
+  const { signUp, signInWithGoogle, signInWithFacebook } = useAuth();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [socialLoading, setSocialLoading] = useState<'google' | 'facebook' | null>(null);
+  const [loadingMessage, setLoadingMessage] = useState('Creating account...');
 
   const handleSignUp = async () => {
     if (!fullName || !email || !password || !confirmPassword) {
@@ -39,16 +49,81 @@ export default function SignUpScreen() {
     }
 
     setIsLoading(true);
-    // Simulate sign up - in production, this would call your auth API
-    setTimeout(() => {
+    try {
+      await signUp(email, password);
+      // Navigate to main app
+      router.replace('/(tabs)');
+    } catch (error: any) {
+      Alert.alert('Sign Up Failed', error.message || 'Failed to create account. Please try again.');
+    } finally {
       setIsLoading(false);
-      Alert.alert('Success', 'Account created successfully!', [
-        {
-          text: 'OK',
-          onPress: () => router.replace('/(tabs)'),
-        },
-      ]);
-    }, 1000);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    if (!FirebaseWrapper.isAvailable()) {
+      Alert.alert('Configuration Required', 'Google Sign-In requires Firebase configuration. Please contact support.');
+      return;
+    }
+
+    setSocialLoading('google');
+    setLoadingMessage('Creating account with Google...');
+    try {
+      await GoogleSignin.hasPlayServices();
+      const response = await GoogleSignin.signIn();
+
+      // Check if sign-in was successful
+      if (response.type === 'cancelled') {
+        return; // User cancelled, don't show error
+      }
+
+      const idToken = response.data.idToken;
+      if (!idToken) {
+        throw new Error('Failed to get Google ID token');
+      }
+
+      await signInWithGoogle(idToken);
+      router.replace('/(tabs)');
+    } catch (error: any) {
+      console.error('Google Sign-In Error:', error);
+      if (error.code !== '-5') {
+        Alert.alert('Google Sign-In Failed', error.message || 'Failed to sign in with Google. Please try again.');
+      }
+    } finally {
+      setSocialLoading(null);
+    }
+  };
+
+  const handleFacebookSignIn = async () => {
+    if (!FirebaseWrapper.isAvailable()) {
+      Alert.alert('Configuration Required', 'Facebook Sign-In requires Firebase configuration. Please contact support.');
+      return;
+    }
+
+    setSocialLoading('facebook');
+    setLoadingMessage('Creating account with Facebook...');
+    try {
+      const result = await LoginManager.logInWithPermissions(['public_profile', 'email']);
+
+      if (result.isCancelled) {
+        throw new Error('User cancelled Facebook login');
+      }
+
+      const data = await AccessToken.getCurrentAccessToken();
+      if (!data) {
+        throw new Error('Failed to get Facebook access token');
+      }
+
+      await signInWithFacebook(data.accessToken);
+      router.replace('/(tabs)');
+    } catch (error: any) {
+      console.error('Facebook Sign-In Error:', error);
+      if (error.message !== 'User cancelled Facebook login') {
+        Alert.alert('Facebook Sign-In Failed', error.message || 'Failed to sign in with Facebook. Please try again.');
+      }
+    } finally {
+      setSocialLoading(null);
+    }
   };
 
   return (
@@ -133,6 +208,29 @@ export default function SignUpScreen() {
               {isLoading ? 'CREATING ACCOUNT...' : 'SIGN UP'}
             </Text>
           </TouchableOpacity>
+
+          {/* Social Login Section (only shows if Firebase is available) */}
+          {FirebaseWrapper.isAvailable() && (
+            <>
+              <DividerWithText text="or continue with" />
+
+              <SocialLoginButton
+                provider="google"
+                onPress={handleGoogleSignIn}
+                loading={socialLoading === 'google'}
+                disabled={socialLoading !== null}
+              />
+
+              <View style={styles.socialButtonSpacing} />
+
+              <SocialLoginButton
+                provider="facebook"
+                onPress={handleFacebookSignIn}
+                loading={socialLoading === 'facebook'}
+                disabled={socialLoading !== null}
+              />
+            </>
+          )}
         </View>
 
         {/* Login Link */}
@@ -143,6 +241,9 @@ export default function SignUpScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Premium Loading Overlay */}
+      <PremiumLoadingOverlay visible={socialLoading !== null} message={loadingMessage} />
     </KeyboardAvoidingView>
   );
 }
@@ -222,5 +323,8 @@ const styles = StyleSheet.create({
     fontSize: Typography.body,
     color: Colors.towerGold,
     fontWeight: Typography.semiBold,
+  },
+  socialButtonSpacing: {
+    height: Spacing.md,
   },
 });
