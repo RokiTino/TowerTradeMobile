@@ -16,12 +16,12 @@ import TowerTradeLogo from '@/components/TowerTradeLogo';
 import SocialLoginButton from '@/components/SocialLoginButton';
 import DividerWithText from '@/components/DividerWithText';
 import PremiumLoadingOverlay from '@/components/PremiumLoadingOverlay';
-import { FirebaseWrapper } from '@/services/firebase/FirebaseWrapper';
+import AIMarketSnapshot from '@/components/AIMarketSnapshot';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function SignUpScreen() {
   const router = useRouter();
-  const { signUp, signInWithGoogle } = useAuth();
+  const { signUp, signInWithGoogle, user } = useAuth();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -29,6 +29,7 @@ export default function SignUpScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState<'google' | null>(null);
   const [loadingMessage, setLoadingMessage] = useState('Creating account...');
+  const [showMarketSnapshot, setShowMarketSnapshot] = useState(false);
 
   const handleSignUp = async () => {
     if (!fullName || !email || !password || !confirmPassword) {
@@ -49,8 +50,8 @@ export default function SignUpScreen() {
     setIsLoading(true);
     try {
       await signUp(email, password);
-      // Navigate to main app
-      router.replace('/(tabs)');
+      // Show AI Market Snapshot after successful signup
+      setShowMarketSnapshot(true);
     } catch (error: any) {
       Alert.alert('Sign Up Failed', error.message || 'Failed to create account. Please try again.');
     } finally {
@@ -59,52 +60,48 @@ export default function SignUpScreen() {
   };
 
   const handleGoogleSignIn = async () => {
-    // On web, show a professional message about mobile optimization
-    if (Platform.OS === 'web') {
-      Alert.alert(
-        'Mobile Experience Recommended',
-        'Google Sign-In is currently optimized for our mobile app. Please use Email/Password to continue on web, or download the TowerTrade app for the full social login experience.',
-        [{ text: 'OK', style: 'default' }]
-      );
-      return;
-    }
-
-    if (!FirebaseWrapper.isAvailable()) {
-      Alert.alert('Configuration Required', 'Google Sign-In requires Firebase configuration. Please contact support.');
-      return;
-    }
-
     setSocialLoading('google');
     setLoadingMessage('Creating account with Google...');
+
     try {
-      // Dynamically import Google Sign-In SDK (only available on native platforms)
-      const { GoogleSignin } = require('@react-native-google-signin/google-signin');
+      // Universal Google Sign-In (works on all platforms)
+      await signInWithGoogle();
 
-      await GoogleSignin.hasPlayServices();
-      const response = await GoogleSignin.signIn();
-
-      // Check if sign-in was successful
-      if (response.type === 'cancelled') {
-        return; // User cancelled, don't show error
-      }
-
-      const idToken = response.data.idToken;
-      if (!idToken) {
-        throw new Error('Failed to get Google ID token');
-      }
-
-      await signInWithGoogle(idToken);
-      router.replace('/(tabs)');
+      // Show AI Market Snapshot after successful signup
+      setShowMarketSnapshot(true);
     } catch (error: any) {
       console.error('Google Sign-In Error:', error);
-      if (error.code !== '-5') {
-        Alert.alert('Google Sign-In Failed', error.message || 'Failed to sign in with Google. Please try again.');
+
+      // Handle user cancellation gracefully
+      if (error.message?.includes('cancelled') || error.message?.includes('canceled') || error.code === '-5') {
+        // User cancelled, don't show error
+        return;
       }
+
+      // Handle Firebase configuration error more gracefully
+      if (error.message?.includes('Firebase configuration')) {
+        Alert.alert(
+          'Configuration Required',
+          'Google Sign-In requires Firebase configuration. Please contact support.'
+        );
+        return;
+      }
+
+      // Show error alert with friendly message
+      Alert.alert(
+        'Google Sign-In Failed',
+        error.message || 'Failed to sign in with Google. Please try again.'
+      );
     } finally {
       setSocialLoading(null);
     }
   };
 
+  const handleCloseMarketSnapshot = () => {
+    setShowMarketSnapshot(false);
+    // Navigate to main app after closing market snapshot
+    router.replace('/(tabs)');
+  };
 
   return (
     <KeyboardAvoidingView
@@ -213,6 +210,13 @@ export default function SignUpScreen() {
 
       {/* Premium Loading Overlay */}
       <PremiumLoadingOverlay visible={socialLoading !== null} message={loadingMessage} />
+
+      {/* AI Market Snapshot Modal */}
+      <AIMarketSnapshot
+        visible={showMarketSnapshot}
+        onClose={handleCloseMarketSnapshot}
+        userName={user?.displayName || user?.email?.split('@')[0] || fullName}
+      />
     </KeyboardAvoidingView>
   );
 }

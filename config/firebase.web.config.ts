@@ -5,12 +5,12 @@
  */
 
 export const firebaseWebConfig = {
-  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY || "AIzaSyDGxhJt6r6OYL7DGxJfkZ6YyZ8xZ6Z6Z6Z",
-  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN || "towertrade-app.firebaseapp.com",
-  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || "towertrade-app",
-  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET || "towertrade-app.appspot.com",
+  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY || "AIzaSyDJjTixbZ0hInT6Rmj1gRyeBHrUps6aE4I",
+  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN || "towertrader-56483.firebaseapp.com",
+  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || "towertrader-56483",
+  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET || "towertrader-56483.firebasestorage.app",
   messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "253066400729",
-  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID || "1:253066400729:web:YOUR_WEB_APP_ID",
+  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID || "1:253066400729:web:823fc8",
   measurementId: process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 

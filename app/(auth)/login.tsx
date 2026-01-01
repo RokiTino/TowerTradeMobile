@@ -17,16 +17,17 @@ import { useAuth } from '@/contexts/AuthContext';
 import SocialLoginButton from '@/components/SocialLoginButton';
 import DividerWithText from '@/components/DividerWithText';
 import PremiumLoadingOverlay from '@/components/PremiumLoadingOverlay';
-import { FirebaseWrapper } from '@/services/firebase/FirebaseWrapper';
+import AIMarketSnapshot from '@/components/AIMarketSnapshot';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { signIn, signInWithGoogle } = useAuth();
+  const { signIn, signInWithGoogle, user } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState<'google' | null>(null);
   const [loadingMessage, setLoadingMessage] = useState('Authenticating...');
+  const [showMarketSnapshot, setShowMarketSnapshot] = useState(false);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -37,8 +38,8 @@ export default function LoginScreen() {
     setIsLoading(true);
     try {
       await signIn(email, password);
-      // Navigate to main app
-      router.replace('/(tabs)');
+      // Show AI Market Snapshot after successful login
+      setShowMarketSnapshot(true);
     } catch (error: any) {
       Alert.alert('Login Failed', error.message || 'Please check your credentials and try again.');
     } finally {
@@ -54,14 +55,23 @@ export default function LoginScreen() {
       // Universal Google Sign-In (works on all platforms)
       await signInWithGoogle();
 
-      // Navigate to main app on success
-      router.replace('/(tabs)');
+      // Show AI Market Snapshot after successful login
+      setShowMarketSnapshot(true);
     } catch (error: any) {
       console.error('Google Sign-In Error:', error);
 
       // Handle user cancellation gracefully
       if (error.message?.includes('cancelled') || error.message?.includes('canceled') || error.code === '-5') {
         // User cancelled, don't show error
+        return;
+      }
+
+      // Handle Firebase configuration error more gracefully
+      if (error.message?.includes('Firebase configuration')) {
+        Alert.alert(
+          'Configuration Required',
+          'Google Sign-In requires Firebase configuration. Please contact support.'
+        );
         return;
       }
 
@@ -73,6 +83,12 @@ export default function LoginScreen() {
     } finally {
       setSocialLoading(null);
     }
+  };
+
+  const handleCloseMarketSnapshot = () => {
+    setShowMarketSnapshot(false);
+    // Navigate to main app after closing market snapshot
+    router.replace('/(tabs)');
   };
 
 
@@ -164,6 +180,13 @@ export default function LoginScreen() {
 
       {/* Premium Loading Overlay */}
       <PremiumLoadingOverlay visible={socialLoading !== null} message={loadingMessage} />
+
+      {/* AI Market Snapshot Modal */}
+      <AIMarketSnapshot
+        visible={showMarketSnapshot}
+        onClose={handleCloseMarketSnapshot}
+        userName={user?.displayName || user?.email?.split('@')[0]}
+      />
     </KeyboardAvoidingView>
   );
 }
