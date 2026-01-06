@@ -18,6 +18,7 @@ import SocialLoginButton from '@/components/SocialLoginButton';
 import DividerWithText from '@/components/DividerWithText';
 import PremiumLoadingOverlay from '@/components/PremiumLoadingOverlay';
 import AIMarketSnapshot from '@/components/AIMarketSnapshot';
+import ElegantAlert from '@/components/ElegantAlert';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -28,6 +29,19 @@ export default function LoginScreen() {
   const [socialLoading, setSocialLoading] = useState<'google' | null>(null);
   const [loadingMessage, setLoadingMessage] = useState('Authenticating...');
   const [showMarketSnapshot, setShowMarketSnapshot] = useState(false);
+
+  // Elegant error alert state
+  const [errorAlert, setErrorAlert] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    type: 'error' | 'warning' | 'info';
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+    type: 'error',
+  });
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -60,29 +74,49 @@ export default function LoginScreen() {
     } catch (error: any) {
       console.error('Google Sign-In Error:', error);
 
-      // Handle user cancellation gracefully
+      // Handle user cancellation gracefully (don't show any alert)
       if (error.message?.includes('cancelled') || error.message?.includes('canceled') || error.code === '-5') {
-        // User cancelled, don't show error
         return;
       }
 
-      // Handle Firebase configuration error more gracefully
-      if (error.message?.includes('Firebase configuration')) {
-        Alert.alert(
-          'Configuration Required',
-          'Google Sign-In requires Firebase configuration. Please contact support.'
-        );
-        return;
+      // Determine alert type and message
+      let alertType: 'error' | 'warning' | 'info' = 'error';
+      let alertTitle = 'Google Sign-In Failed';
+      let alertMessage = error.message || 'Failed to sign in with Google. Please try again.';
+
+      // Handle Firebase configuration error with warning style
+      if (error.message?.includes('configuration') || error.message?.includes('not initialized')) {
+        alertType = 'warning';
+        alertTitle = 'Configuration Required';
+        alertMessage = 'Google Sign-In requires Firebase configuration. Please contact support.';
       }
 
-      // Show error alert with friendly message
-      Alert.alert(
-        'Google Sign-In Failed',
-        error.message || 'Failed to sign in with Google. Please try again.'
-      );
+      // Handle network errors
+      if (error.message?.includes('network')) {
+        alertType = 'warning';
+        alertTitle = 'Network Error';
+        alertMessage = 'Unable to connect. Please check your internet connection and try again.';
+      }
+
+      // Show elegant Tower Gold themed alert
+      setErrorAlert({
+        visible: true,
+        title: alertTitle,
+        message: alertMessage,
+        type: alertType,
+      });
     } finally {
       setSocialLoading(null);
     }
+  };
+
+  const dismissErrorAlert = () => {
+    setErrorAlert({
+      visible: false,
+      title: '',
+      message: '',
+      type: 'error',
+    });
   };
 
   const handleCloseMarketSnapshot = () => {
@@ -186,6 +220,15 @@ export default function LoginScreen() {
         visible={showMarketSnapshot}
         onClose={handleCloseMarketSnapshot}
         userName={user?.displayName || user?.email?.split('@')[0]}
+      />
+
+      {/* Elegant Error Alert */}
+      <ElegantAlert
+        visible={errorAlert.visible}
+        title={errorAlert.title}
+        message={errorAlert.message}
+        type={errorAlert.type}
+        onDismiss={dismissErrorAlert}
       />
     </KeyboardAvoidingView>
   );

@@ -40,11 +40,60 @@ export class UniversalFirebaseWrapper {
   private static isWeb = Platform.OS === 'web';
 
   /**
+   * Validate Firebase configuration before initialization
+   */
+  private static validateConfig(): { valid: boolean; errors: string[] } {
+    const errors: string[] = [];
+
+    if (!firebaseWebConfig.apiKey) {
+      errors.push('Missing Firebase API Key (EXPO_PUBLIC_FIREBASE_API_KEY)');
+    }
+
+    if (!firebaseWebConfig.authDomain) {
+      errors.push('Missing Firebase Auth Domain (EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN)');
+    }
+
+    if (!firebaseWebConfig.projectId) {
+      errors.push('Missing Firebase Project ID (EXPO_PUBLIC_FIREBASE_PROJECT_ID)');
+    }
+
+    if (!googleWebClientId) {
+      errors.push('Missing Google Web Client ID (EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID)');
+    }
+
+    if (errors.length > 0) {
+      console.error('❌ Firebase Configuration Errors:');
+      errors.forEach((error) => console.error(`   - ${error}`));
+      return { valid: false, errors };
+    }
+
+    console.info('✅ Firebase configuration validated successfully');
+    console.info(`📋 Config details:
+      - Project ID: ${firebaseWebConfig.projectId}
+      - Auth Domain: ${firebaseWebConfig.authDomain}
+      - Web Client ID: ${googleWebClientId?.substring(0, 25)}...`);
+
+    return { valid: true, errors: [] };
+  }
+
+  /**
    * Initialize Firebase for the current platform
    */
   static async initialize(): Promise<boolean> {
     if (this.initialized) {
+      console.info('ℹ️  Firebase already initialized');
       return true;
+    }
+
+    console.info('🚀 Initializing Firebase Universal Wrapper...');
+    console.info(`📱 Platform: ${Platform.OS}`);
+    console.info(`🌐 Environment: ${Platform.OS === 'web' ? 'Web' : 'Native/Expo Go'}`);
+
+    // Validate configuration
+    const validation = this.validateConfig();
+    if (!validation.valid) {
+      console.error('❌ Cannot initialize Firebase: Configuration validation failed');
+      return false;
     }
 
     try {
@@ -54,7 +103,7 @@ export class UniversalFirebaseWrapper {
         return await this.initializeNative();
       }
     } catch (error) {
-      console.error('Firebase initialization failed:', error);
+      console.error('❌ Firebase initialization failed:', error);
       return false;
     }
   }
@@ -95,28 +144,37 @@ export class UniversalFirebaseWrapper {
 
   /**
    * Initialize Firebase Native (React Native Firebase)
+   * Falls back to Web SDK in Expo Go environment
    */
   private static async initializeNative(): Promise<boolean> {
     try {
       console.info('📱 Initializing Firebase for Native...');
 
-      // Load native Firebase modules
-      nativeFirebaseApp = require('@react-native-firebase/app').default;
-      nativeAuth = require('@react-native-firebase/auth').default;
-      nativeFirestore = require('@react-native-firebase/firestore').default;
+      // Try to load native Firebase modules
+      try {
+        nativeFirebaseApp = require('@react-native-firebase/app').default;
+        nativeAuth = require('@react-native-firebase/auth').default;
+        nativeFirestore = require('@react-native-firebase/firestore').default;
 
-      // Check if Firebase is configured
-      const apps = nativeFirebaseApp.apps;
-      if (apps.length === 0) {
-        console.warn('Firebase not configured. Please add google-services.json (Android) or GoogleService-Info.plist (iOS)');
-        return false;
+        // Check if Firebase is configured
+        const apps = nativeFirebaseApp.apps;
+        if (apps.length === 0) {
+          console.warn('⚠️  Native Firebase not configured. Please add google-services.json (Android) or GoogleService-Info.plist (iOS)');
+          throw new Error('Native Firebase not configured');
+        }
+
+        this.initialized = true;
+        console.info('☁️  Firebase Native Mode: All services enabled');
+        return true;
+      } catch (nativeError) {
+        console.warn('⚠️  Native Firebase modules not available (running in Expo Go?)');
+        console.info('🔄 Falling back to Firebase JS SDK for native platform...');
+
+        // Fall back to Web SDK (works in Expo Go)
+        return await this.initializeWeb();
       }
-
-      this.initialized = true;
-      console.info('☁️  Firebase Native Mode: All services enabled');
-      return true;
     } catch (error) {
-      console.error('Failed to initialize Firebase Native:', error);
+      console.error('❌ Failed to initialize Firebase for Native:', error);
       return false;
     }
   }
@@ -176,52 +234,94 @@ export class UniversalFirebaseWrapper {
 
   /**
    * Sign in with Google (universal)
+   * Auto-detects environment and uses appropriate method
    */
   static async signInWithGoogle(): Promise<any> {
     if (!this.initialized) {
-      throw new Error('Firebase not initialized. Call initialize() first.');
+      const errorMsg = 'Firebase not initialized. Call initialize() first.';
+      console.error('❌ Google Sign-In Error:', errorMsg);
+      throw new Error(errorMsg);
     }
 
-    if (this.isWeb) {
-      // Web: Use popup authentication
+    console.info('🔐 Starting Google Sign-In flow...');
+    console.info(`📍 Platform: ${Platform.OS}, Using Web SDK: ${!!webAuth}`);
+
+    // Check if we're using Web SDK (either on web or fallback in Expo Go)
+    if (this.isWeb || webAuth) {
+      // Web or Expo Go: Use Firebase JS SDK popup authentication
+      console.info('🌐 Using Firebase JS SDK for Google Sign-In');
+
       const { signInWithPopup } = require('firebase/auth');
-      const auth = this.getAuth();
-      const provider = this.getGoogleProvider();
+      const { GoogleAuthProvider } = require('firebase/auth');
+      const auth = webAuth;
+
+      if (!auth) {
+        const errorMsg = 'Firebase Auth not initialized';
+        console.error('❌', errorMsg);
+        throw new Error(errorMsg);
+      }
+
+      const provider = new GoogleAuthProvider();
+      provider.addScope('email');
+      provider.addScope('profile');
 
       try {
+        console.info('🔄 Opening Google Sign-In popup...');
         const result = await signInWithPopup(auth, provider);
-        console.info('✅ Google Sign-In successful (Web)');
+        console.info('✅ Google Sign-In successful!');
+        console.info(`👤 User: ${result.user.email}`);
         return result.user;
       } catch (error: any) {
+        console.error('❌ Google Sign-In popup error:', {
+          code: error.code,
+          message: error.message,
+          details: error
+        });
+
         if (error.code === 'auth/popup-blocked') {
-          console.warn('Popup blocked, trying redirect...');
+          console.warn('⚠️  Popup blocked, trying redirect...');
           const { signInWithRedirect } = require('firebase/auth');
           await signInWithRedirect(auth, provider);
           return null; // Will complete after redirect
         }
+
+        if (error.code === 'auth/popup-closed-by-user') {
+          throw new Error('Sign-in cancelled');
+        }
+
         throw error;
       }
     } else {
-      // Native: Use React Native Google Sign-In
+      // Native with React Native Firebase: Use native Google Sign-In
+      console.info('📱 Using Native Google Sign-In');
+
       const { GoogleSignin } = require('@react-native-google-signin/google-signin');
 
       // Ensure Google Sign-In is configured
+      console.info('⚙️  Configuring Google Sign-In with webClientId:', googleWebClientId?.substring(0, 20) + '...');
       GoogleSignin.configure({
         webClientId: googleWebClientId,
         offlineAccess: true,
       });
 
+      console.info('📋 Checking Play Services...');
       await GoogleSignin.hasPlayServices();
+
+      console.info('🔄 Initiating native Google Sign-In...');
       const response = await GoogleSignin.signIn();
 
       if (response.type === 'cancelled') {
+        console.warn('⚠️  User cancelled Google Sign-In');
         throw new Error('Google Sign-In cancelled');
       }
 
-      const idToken = response.data.idToken;
+      const idToken = response.data?.idToken;
       if (!idToken) {
+        console.error('❌ Failed to get ID token from Google Sign-In response');
         throw new Error('Failed to get Google ID token');
       }
+
+      console.info('✅ Got ID token, signing in with Firebase...');
 
       // Sign in with Firebase using the ID token
       const auth = this.getAuth();

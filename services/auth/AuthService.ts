@@ -91,27 +91,52 @@ export class AuthService {
    * Sign in with Google (universal - works on web and native)
    */
   static async signInWithGoogle(idToken?: string): Promise<AuthUser> {
+    console.info('🔐 AuthService: Starting Google Sign-In...');
+
+    // Check if Firebase is available
     if (!UniversalFirebaseWrapper.isAvailable()) {
+      const errorMsg = 'Firebase is not initialized. Google Sign-In requires Firebase configuration.';
+      console.error('❌ AuthService Error:', errorMsg);
+      console.error('💡 This usually means:');
+      console.error('   1. Running in Expo Go without proper Firebase JS SDK fallback');
+      console.error('   2. Missing Firebase configuration files');
+      console.error('   3. Firebase initialization failed at app startup');
       throw new Error('Google Sign-In requires Firebase configuration');
     }
 
     try {
+      console.info('🔄 AuthService: Delegating to UniversalFirebaseWrapper...');
+
       // Universal Firebase wrapper handles both web and native
       const user = await UniversalFirebaseWrapper.signInWithGoogle();
 
       if (!user) {
         // Redirect case (web) - user will be returned after redirect completes
+        console.info('ℹ️  AuthService: Authentication redirect initiated');
         throw new Error('Authentication in progress. Please wait...');
       }
 
       const authUser = this.mapFirebaseUser(user);
       await this.saveUserSession(authUser);
 
-      console.info('✅ Google Sign-In successful');
+      console.info('✅ AuthService: Google Sign-In completed successfully');
+      console.info(`👤 Authenticated user: ${authUser.email}`);
       return authUser;
     } catch (error: any) {
-      console.error('Google sign-in error:', error);
-      throw new Error(this.getAuthErrorMessage(error.code));
+      // Enhanced error logging
+      console.error('❌ AuthService: Google Sign-In failed');
+      console.error('📋 Error details:', {
+        message: error.message,
+        code: error.code,
+        name: error.name,
+        stack: error.stack?.split('\n').slice(0, 3).join('\n')
+      });
+
+      // Map error to user-friendly message
+      const userMessage = this.getGoogleSignInErrorMessage(error);
+      console.error('💬 User-facing message:', userMessage);
+
+      throw new Error(userMessage);
     }
   }
 
@@ -321,6 +346,50 @@ export class AuthService {
       displayName: user.displayName,
       photoURL: user.photoURL,
     };
+  }
+
+  /**
+   * Get user-friendly error messages for Google Sign-In
+   */
+  private static getGoogleSignInErrorMessage(error: any): string {
+    const errorMessage = error.message?.toLowerCase() || '';
+    const errorCode = error.code || '';
+
+    // Handle common Google Sign-In errors
+    if (errorMessage.includes('cancelled') || errorMessage.includes('canceled') || errorCode === '-5') {
+      return 'Sign-in cancelled';
+    }
+
+    if (errorMessage.includes('network') || errorCode === 'auth/network-request-failed') {
+      return 'Network error. Please check your connection and try again.';
+    }
+
+    if (errorMessage.includes('popup-closed-by-user') || errorCode === 'auth/popup-closed-by-user') {
+      return 'Sign-in window was closed. Please try again.';
+    }
+
+    if (errorMessage.includes('popup-blocked') || errorCode === 'auth/popup-blocked') {
+      return 'Pop-up was blocked. Please allow pop-ups and try again.';
+    }
+
+    if (errorMessage.includes('configuration') || errorMessage.includes('not initialized')) {
+      return 'Google Sign-In is not properly configured. Please contact support.';
+    }
+
+    if (errorCode === 'auth/invalid-credential' || errorCode === 'auth/invalid-api-key') {
+      return 'Invalid Google credentials. Please contact support.';
+    }
+
+    if (errorMessage.includes('developer') || errorCode === '10') {
+      return 'Google Sign-In configuration error. Please contact support.';
+    }
+
+    // Return the original message if it's user-friendly, otherwise generic message
+    if (errorMessage && errorMessage.length < 100 && !errorMessage.includes('undefined')) {
+      return error.message;
+    }
+
+    return 'Failed to sign in with Google. Please try again.';
   }
 
   /**
