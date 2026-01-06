@@ -84,11 +84,11 @@ export default function LoginScreen() {
       let alertTitle = 'Google Sign-In Failed';
       let alertMessage = error.message || 'Failed to sign in with Google. Please try again.';
 
-      // Handle Firebase configuration error with warning style
+      // Handle Supabase configuration error with warning style
       if (error.message?.includes('configuration') || error.message?.includes('not initialized')) {
         alertType = 'warning';
         alertTitle = 'Configuration Required';
-        alertMessage = 'Google Sign-In requires Firebase configuration. Please contact support.';
+        alertMessage = 'Google Sign-In requires Supabase configuration. Please contact support.';
       }
 
       // Handle network errors

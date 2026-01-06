@@ -78,11 +78,11 @@ export default function SignUpScreen() {
         return;
       }
 
-      // Handle Firebase configuration error more gracefully
-      if (error.message?.includes('Firebase configuration')) {
+      // Handle Supabase configuration error more gracefully
+      if (error.message?.includes('Supabase configuration')) {
         Alert.alert(
           'Configuration Required',
-          'Google Sign-In requires Firebase configuration. Please contact support.'
+          'Google Sign-In requires Supabase configuration. Please contact support.'
         );
         return;
       }

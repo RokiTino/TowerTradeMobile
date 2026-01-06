@@ -1,9 +1,7 @@
 /**
- * Expo App Configuration with Firebase Support
+ * Expo App Configuration with Supabase Support
  *
- * SETUP: Place these files in the project root before running prebuild:
- *   - google-services.json (from Firebase Console > Android app)
- *   - GoogleService-Info.plist (from Firebase Console > iOS app)
+ * TowerTrade - Premium real estate investment platform
  */
 
 module.exports = {
@@ -21,7 +19,6 @@ module.exports = {
     ios: {
       supportsTablet: true,
       bundleIdentifier: 'com.towertrade.app',
-      googleServicesFile: './GoogleService-Info.plist',
       infoPlist: {
         NSFaceIDUsageDescription: 'TowerTrade uses Face ID to secure your investment transactions',
         NSCameraUsageDescription: 'TowerTrade needs camera access for document verification',
@@ -31,8 +28,6 @@ module.exports = {
             CFBundleURLSchemes: [
               'towertrade',
               'com.towertrade.app',
-              // Google Sign-In URL scheme - this gets auto-populated from GoogleService-Info.plist
-              'com.googleusercontent.apps.253066400729-7v2cbr873bapuv2hjs038lulebujrcil',
             ],
           },
         ],
@@ -46,7 +41,6 @@ module.exports = {
         backgroundColor: '#B08D57',
       },
       package: 'com.towertrade.app',
-      googleServicesFile: './google-services.json',
       permissions: [
         'USE_BIOMETRIC',
         'USE_FINGERPRINT',
@@ -75,10 +69,6 @@ module.exports = {
           backgroundColor: '#B08D57',
         },
       ],
-      // Firebase app plugin (auth and firestore are auto-linked)
-      '@react-native-firebase/app',
-      // Google Sign-In
-      '@react-native-google-signin/google-signin',
       // Biometric authentication
       'expo-local-authentication',
     ],
