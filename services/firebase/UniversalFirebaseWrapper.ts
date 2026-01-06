@@ -5,7 +5,25 @@
  */
 
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 import { firebaseWebConfig, googleWebClientId } from '@/config/firebase.web.config';
+
+// Import Firebase JS SDK modules (always available)
+import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
+import {
+  getAuth,
+  signInWithPopup as webSignInWithPopup,
+  GoogleAuthProvider,
+  Auth as WebAuth,
+  signInWithEmailAndPassword as webSignInWithEmail,
+  createUserWithEmailAndPassword as webCreateUserWithEmail,
+  signOut as webSignOut,
+  onAuthStateChanged as webOnAuthStateChanged,
+  signInWithCredential as webSignInWithCredential,
+  initializeAuth
+} from 'firebase/auth';
+import { getFirestore, Firestore as WebFirestore } from 'firebase/firestore';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Type definitions for universal Firebase interface
 export interface UniversalAuth {
@@ -38,6 +56,17 @@ let nativeFirestore: any = null;
 export class UniversalFirebaseWrapper {
   private static initialized = false;
   private static isWeb = Platform.OS === 'web';
+  private static useWebSDK = false; // Flag to indicate using Web SDK on native
+
+  /**
+   * Detect if running in Expo Go
+   */
+  private static isExpoGo(): boolean {
+    const executionEnvironment = Constants.executionEnvironment;
+    // ExecutionEnvironment.StoreClient means Expo Go
+    // ExecutionEnvironment.Standalone means standalone app
+    return executionEnvironment === 'storeClient';
+  }
 
   /**
    * Validate Firebase configuration before initialization
@@ -87,7 +116,10 @@ export class UniversalFirebaseWrapper {
 
     console.info('🚀 Initializing Firebase Universal Wrapper...');
     console.info(`📱 Platform: ${Platform.OS}`);
-    console.info(`🌐 Environment: ${Platform.OS === 'web' ? 'Web' : 'Native/Expo Go'}`);
+
+    const inExpoGo = this.isExpoGo();
+    console.info(`🔍 Expo Go detected: ${inExpoGo}`);
+    console.info(`🌐 Environment: ${this.isWeb ? 'Web' : (inExpoGo ? 'Expo Go (using Web SDK)' : 'Native')}`);
 
     // Validate configuration
     const validation = this.validateConfig();
@@ -97,7 +129,8 @@ export class UniversalFirebaseWrapper {
     }
 
     try {
-      if (this.isWeb) {
+      // Always use Web SDK on web or in Expo Go
+      if (this.isWeb || inExpoGo) {
         return await this.initializeWeb();
       } else {
         return await this.initializeNative();
@@ -110,48 +143,66 @@ export class UniversalFirebaseWrapper {
 
   /**
    * Initialize Firebase Web (JS SDK)
+   * Works on both web and React Native (Expo Go)
    */
   private static async initializeWeb(): Promise<boolean> {
     try {
-      console.info('🌐 Initializing Firebase for Web...');
-
-      const { initializeApp, getApps } = require('firebase/app');
-      const { getAuth: getWebAuth, GoogleAuthProvider } = require('firebase/auth');
-      const { getFirestore: getWebFirestore } = require('firebase/firestore');
+      console.info('🌐 Initializing Firebase JS SDK...');
 
       // Initialize Firebase app if not already initialized
-      if (getApps().length === 0) {
+      const existingApps = getApps();
+      if (existingApps.length === 0) {
         webFirebaseApp = initializeApp(firebaseWebConfig);
         console.info('✅ Firebase Web App initialized');
       } else {
-        webFirebaseApp = getApps()[0];
+        webFirebaseApp = existingApps[0];
         console.info('✅ Firebase Web App already initialized');
       }
 
-      // Initialize services
-      webAuth = getWebAuth(webFirebaseApp);
-      webFirestore = getWebFirestore(webFirebaseApp);
+      // Initialize Auth
+      // Note: In React Native, Firebase Auth JS SDK will use memory persistence by default
+      // For production, consider implementing AsyncStorage persistence manually
+      try {
+        webAuth = getAuth(webFirebaseApp);
+        console.info('✅ Auth initialized successfully');
+      } catch (error) {
+        console.error('❌ Failed to initialize Auth:', error);
+        throw error;
+      }
+
+      // Initialize Firestore
+      webFirestore = getFirestore(webFirebaseApp);
+
+      // Create Google Auth Provider
       webGoogleProvider = new GoogleAuthProvider();
 
       this.initialized = true;
-      console.info('☁️  Firebase Web Mode: All services enabled');
+      this.useWebSDK = true;
+      console.info('☁️  Firebase JS SDK Mode: All services enabled');
       return true;
     } catch (error) {
-      console.error('Failed to initialize Firebase Web:', error);
+      console.error('❌ Failed to initialize Firebase Web:', error);
       return false;
     }
   }
 
   /**
    * Initialize Firebase Native (React Native Firebase)
-   * Falls back to Web SDK in Expo Go environment
+   * IMPORTANT: This should only be called for standalone builds, NOT Expo Go
    */
   private static async initializeNative(): Promise<boolean> {
     try {
-      console.info('📱 Initializing Firebase for Native...');
+      console.info('📱 Initializing Native Firebase (standalone build)...');
 
-      // Try to load native Firebase modules
+      // Double-check we're not in Expo Go
+      if (this.isExpoGo()) {
+        console.warn('⚠️  Attempted to initialize native Firebase in Expo Go - falling back to Web SDK');
+        return await this.initializeWeb();
+      }
+
+      // Only attempt to load native modules in standalone builds
       try {
+        // Dynamic require to avoid bundling issues
         nativeFirebaseApp = require('@react-native-firebase/app').default;
         nativeAuth = require('@react-native-firebase/auth').default;
         nativeFirestore = require('@react-native-firebase/firestore').default;
@@ -159,18 +210,17 @@ export class UniversalFirebaseWrapper {
         // Check if Firebase is configured
         const apps = nativeFirebaseApp.apps;
         if (apps.length === 0) {
-          console.warn('⚠️  Native Firebase not configured. Please add google-services.json (Android) or GoogleService-Info.plist (iOS)');
-          throw new Error('Native Firebase not configured');
+          console.warn('⚠️  Native Firebase not configured. Falling back to Web SDK...');
+          return await this.initializeWeb();
         }
 
         this.initialized = true;
+        this.useWebSDK = false;
         console.info('☁️  Firebase Native Mode: All services enabled');
         return true;
       } catch (nativeError) {
-        console.warn('⚠️  Native Firebase modules not available (running in Expo Go?)');
-        console.info('🔄 Falling back to Firebase JS SDK for native platform...');
-
-        // Fall back to Web SDK (works in Expo Go)
+        console.warn('⚠️  Native Firebase modules not available');
+        console.info('🔄 Falling back to Firebase JS SDK...');
         return await this.initializeWeb();
       }
     } catch (error) {
@@ -244,17 +294,15 @@ export class UniversalFirebaseWrapper {
     }
 
     console.info('🔐 Starting Google Sign-In flow...');
-    console.info(`📍 Platform: ${Platform.OS}, Using Web SDK: ${!!webAuth}`);
+    console.info(`📍 Platform: ${Platform.OS}, Using Web SDK: ${this.useWebSDK}`);
+    console.info(`🔍 Expo Go: ${this.isExpoGo()}`);
 
-    // Check if we're using Web SDK (either on web or fallback in Expo Go)
-    if (this.isWeb || webAuth) {
-      // Web or Expo Go: Use Firebase JS SDK popup authentication
+    // Check if we're using Web SDK (web, Expo Go, or fallback)
+    if (this.useWebSDK || this.isWeb) {
+      // Use Firebase JS SDK for authentication
       console.info('🌐 Using Firebase JS SDK for Google Sign-In');
 
-      const { signInWithPopup } = require('firebase/auth');
-      const { GoogleAuthProvider } = require('firebase/auth');
       const auth = webAuth;
-
       if (!auth) {
         const errorMsg = 'Firebase Auth not initialized';
         console.error('❌', errorMsg);
@@ -267,7 +315,7 @@ export class UniversalFirebaseWrapper {
 
       try {
         console.info('🔄 Opening Google Sign-In popup...');
-        const result = await signInWithPopup(auth, provider);
+        const result = await webSignInWithPopup(auth, provider);
         console.info('✅ Google Sign-In successful!');
         console.info(`👤 User: ${result.user.email}`);
         return result.user;
@@ -279,13 +327,15 @@ export class UniversalFirebaseWrapper {
         });
 
         if (error.code === 'auth/popup-blocked') {
-          console.warn('⚠️  Popup blocked, trying redirect...');
-          const { signInWithRedirect } = require('firebase/auth');
-          await signInWithRedirect(auth, provider);
-          return null; // Will complete after redirect
+          console.warn('⚠️  Popup blocked');
+          throw new Error('Pop-up was blocked. Please allow pop-ups and try again.');
         }
 
         if (error.code === 'auth/popup-closed-by-user') {
+          throw new Error('Sign-in cancelled');
+        }
+
+        if (error.code === 'auth/cancelled-popup-request') {
           throw new Error('Sign-in cancelled');
         }
 
@@ -293,7 +343,7 @@ export class UniversalFirebaseWrapper {
       }
     } else {
       // Native with React Native Firebase: Use native Google Sign-In
-      console.info('📱 Using Native Google Sign-In');
+      console.info('📱 Using Native Google Sign-In (standalone build)');
 
       const { GoogleSignin } = require('@react-native-google-signin/google-signin');
 
