@@ -34,9 +34,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setUser(authUser);
       setIsLoading(false);
 
-      // Switch services to Firebase when user logs in
+      // Switch services to Supabase when user logs in
       if (authUser) {
-        PaymentService.switchToFirebase(authUser.uid);
+        PaymentService.switchToSupabase(authUser.uid);
         PropertyService.initializeForUser(authUser.uid);
       } else {
         PaymentService.switchToLocal();
@@ -49,7 +49,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setUser(authUser);
       setIsLoading(false);
       if (authUser) {
-        PaymentService.switchToFirebase(authUser.uid);
+        PaymentService.switchToSupabase(authUser.uid);
         PropertyService.initializeForUser(authUser.uid);
       }
     });
@@ -77,7 +77,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const signInWithGoogle = async (idToken?: string) => {
     try {
-      const authUser = await AuthService.signInWithGoogle(idToken);
+      const authUser = await AuthService.signInWithGoogle();
       setUser(authUser);
     } catch (error) {
       throw error;

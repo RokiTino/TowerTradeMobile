@@ -28,10 +28,10 @@ export interface AppConfig {
  * Can be overridden by environment variables
  */
 export const defaultConfig: AppConfig = {
-  // Start with local storage, switch to Firebase when configured
-  backendType: 'local',
+  // Use Supabase as default backend
+  backendType: 'supabase',
   firebaseEnabled: false,
-  supabaseEnabled: false,
+  supabaseEnabled: true,
 
   features: {
     aiPortfolioCounselor: true,
@@ -56,12 +56,14 @@ export function getAppConfig(): AppConfig {
 }
 
 /**
- * Check if Firebase is available and configured
+ * Check if Supabase is available and configured
  */
-export function isFirebaseConfigured(): boolean {
-  // In a real app, this would check if Firebase credentials exist
-  // For now, return false until user adds google-services files
-  return false;
+export function isSupabaseConfigured(): boolean {
+  // Check if Supabase environment variables are set
+  return !!(
+    process.env.EXPO_PUBLIC_SUPABASE_URL &&
+    process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY
+  );
 }
 
 /**

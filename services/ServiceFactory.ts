@@ -1,13 +1,13 @@
 /**
  * Service Factory
  * Creates and manages repository instances based on backend configuration
- * Uses dynamic imports to prevent loading Firebase modules on web
+ * Uses Supabase for cloud sync (universal across web and native)
  */
 
 import { IPaymentRepository } from './repositories/IPaymentRepository';
 import { LocalPaymentRepository } from './repositories/LocalPaymentRepository';
 import { getAppConfig } from '@/config/app.config';
-import { Platform } from 'react-native';
+import { SupabaseService } from './supabase/SupabaseClient';
 
 /**
  * Payment Service Factory
@@ -24,18 +24,17 @@ export class PaymentService {
     const config = getAppConfig();
 
     switch (config.backendType) {
-      case 'firebase':
-        // Prevent Firebase loading on web
-        if (Platform.OS === 'web') {
-          console.info('🌐 Web platform detected: Using Local storage instead of Firebase');
+      case 'supabase':
+        if (!userId) {
+          console.warn('Supabase backend requires userId, falling back to local storage');
           this.instance = new LocalPaymentRepository();
-        } else if (!userId) {
-          console.warn('Firebase backend requires userId, falling back to local storage');
+        } else if (!SupabaseService.isInitialized()) {
+          console.warn('Supabase not initialized, falling back to local storage');
           this.instance = new LocalPaymentRepository();
         } else {
-          // Dynamic import to prevent loading on web
-          const { FirebasePaymentRepository } = require('./repositories/FirebasePaymentRepository');
-          this.instance = new FirebasePaymentRepository(userId);
+          // Import Supabase payment repository
+          const { SupabasePaymentRepository } = require('./repositories/SupabasePaymentRepository');
+          this.instance = new SupabasePaymentRepository(userId);
         }
         break;
 
@@ -62,17 +61,15 @@ export class PaymentService {
   }
 
   /**
-   * Switch to Firebase backend
+   * Switch to Supabase backend
    */
-  static switchToFirebase(userId: string): IPaymentRepository {
-    // Prevent Firebase loading on web
-    if (Platform.OS === 'web') {
-      console.warn('🌐 Firebase backend not available on web, using Local storage');
+  static switchToSupabase(userId: string): IPaymentRepository {
+    if (!SupabaseService.isInitialized()) {
+      console.warn('⚠️  Supabase not initialized, using Local storage');
       this.instance = new LocalPaymentRepository();
     } else {
-      // Dynamic import to prevent loading on web
-      const { FirebasePaymentRepository } = require('./repositories/FirebasePaymentRepository');
-      this.instance = new FirebasePaymentRepository(userId);
+      const { SupabasePaymentRepository } = require('./repositories/SupabasePaymentRepository');
+      this.instance = new SupabasePaymentRepository(userId);
     }
 
     // Ensure we always return a valid instance

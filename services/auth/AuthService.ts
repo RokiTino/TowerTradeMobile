@@ -1,16 +1,15 @@
 /**
- * Firebase Authentication Service
- * Handles email/password and Google Sign-In authentication
- * Gracefully falls back to Local Mode when Firebase is unavailable
+ * Supabase Authentication Service
+ * Handles email/password and Google Sign-In authentication using Supabase
+ * Universal support for Web, iOS, and Android platforms
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { FirebaseWrapper } from '../firebase/FirebaseWrapper';
-import { UniversalFirebaseWrapper } from '../firebase/UniversalFirebaseWrapper';
+import { SupabaseService } from '../supabase/SupabaseClient';
+import { User, Session } from '@supabase/supabase-js';
 
 const AUTH_TOKEN_KEY = '@towertrade_auth_token';
 const USER_DATA_KEY = '@towertrade_user_data';
-const LOCAL_AUTH_KEY = '@towertrade_local_auth';
 
 export interface AuthUser {
   uid: string;
@@ -19,109 +18,103 @@ export interface AuthUser {
   photoURL: string | null;
 }
 
-interface LocalAuthData {
-  email: string;
-  password: string; // In production, this should be hashed
-  uid: string;
-  displayName: string | null;
-}
-
 /**
- * Firebase Authentication Service with Local Mode fallback
+ * Supabase Authentication Service
  */
 export class AuthService {
   /**
-   * Check if Firebase is available
+   * Check if Supabase is available
    */
-  static isFirebaseAvailable(): boolean {
-    return FirebaseWrapper.isAvailable();
+  static isSupabaseAvailable(): boolean {
+    return SupabaseService.isInitialized();
   }
 
   /**
    * Sign in with email and password
    */
   static async signInWithEmail(email: string, password: string): Promise<AuthUser> {
-    // Try Firebase if available
-    if (this.isFirebaseAvailable()) {
-      try {
-        const auth = FirebaseWrapper.getAuth();
-        const userCredential = await auth.signInWithEmailAndPassword(email, password);
-        const authUser = this.mapFirebaseUser(userCredential.user);
-        await this.saveUserSession(authUser);
-        return authUser;
-      } catch (error: any) {
-        console.error('Firebase sign-in error:', error);
-        throw new Error(this.getAuthErrorMessage(error.code));
-      }
+    if (!this.isSupabaseAvailable()) {
+      throw new Error('Supabase not initialized');
     }
 
-    // Fallback to Local Mode authentication
-    return await this.localSignIn(email, password);
+    try {
+      console.info('🔐 AuthService: Signing in with email...');
+      const { user, session } = await SupabaseService.signInWithEmail(email, password);
+
+      if (!user) {
+        throw new Error('Sign-in failed: No user returned');
+      }
+
+      const authUser = this.mapSupabaseUser(user);
+      await this.saveUserSession(authUser, session?.access_token);
+
+      console.info('✅ AuthService: Email sign-in successful');
+      return authUser;
+    } catch (error: any) {
+      console.error('❌ AuthService: Email sign-in error:', error);
+      throw new Error(this.getAuthErrorMessage(error));
+    }
   }
 
   /**
    * Sign up with email and password
    */
   static async signUpWithEmail(email: string, password: string, displayName?: string): Promise<AuthUser> {
-    // Try Firebase if available
-    if (this.isFirebaseAvailable()) {
-      try {
-        const auth = FirebaseWrapper.getAuth();
-        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-
-        // Update profile with display name if provided
-        if (displayName) {
-          await userCredential.user.updateProfile({ displayName });
-        }
-
-        const authUser = this.mapFirebaseUser(userCredential.user);
-        await this.saveUserSession(authUser);
-        return authUser;
-      } catch (error: any) {
-        console.error('Firebase sign-up error:', error);
-        throw new Error(this.getAuthErrorMessage(error.code));
-      }
+    if (!this.isSupabaseAvailable()) {
+      throw new Error('Supabase not initialized');
     }
 
-    // Fallback to Local Mode registration
-    return await this.localSignUp(email, password, displayName);
+    try {
+      console.info('📝 AuthService: Signing up with email...');
+      const { user, session } = await SupabaseService.signUpWithEmail(email, password, displayName);
+
+      if (!user) {
+        throw new Error('Sign-up failed: No user returned');
+      }
+
+      const authUser = this.mapSupabaseUser(user);
+      await this.saveUserSession(authUser, session?.access_token);
+
+      console.info('✅ AuthService: Email sign-up successful');
+      return authUser;
+    } catch (error: any) {
+      console.error('❌ AuthService: Email sign-up error:', error);
+      throw new Error(this.getAuthErrorMessage(error));
+    }
   }
 
   /**
    * Sign in with Google (universal - works on web and native)
    */
-  static async signInWithGoogle(idToken?: string): Promise<AuthUser> {
+  static async signInWithGoogle(): Promise<AuthUser> {
     console.info('🔐 AuthService: Starting Google Sign-In...');
 
-    // Check if Firebase is available
-    if (!UniversalFirebaseWrapper.isAvailable()) {
-      const errorMsg = 'Firebase is not initialized. Google Sign-In requires Firebase configuration.';
+    if (!this.isSupabaseAvailable()) {
+      const errorMsg = 'Supabase is not initialized. Google Sign-In requires Supabase configuration.';
       console.error('❌ AuthService Error:', errorMsg);
-      console.error('💡 This usually means:');
-      console.error('   1. Running in Expo Go without proper Firebase JS SDK fallback');
-      console.error('   2. Missing Firebase configuration files');
-      console.error('   3. Firebase initialization failed at app startup');
-      throw new Error('Google Sign-In requires Firebase configuration');
+      throw new Error('Google Sign-In requires Supabase configuration');
     }
 
     try {
-      console.info('🔄 AuthService: Delegating to UniversalFirebaseWrapper...');
+      console.info('🔄 AuthService: Delegating to SupabaseService...');
 
-      // Universal Firebase wrapper handles both web and native
-      const user = await UniversalFirebaseWrapper.signInWithGoogle();
+      // Supabase handles OAuth universally
+      const { url } = await SupabaseService.signInWithGoogle();
 
-      if (!user) {
-        // Redirect case (web) - user will be returned after redirect completes
-        console.info('ℹ️  AuthService: Authentication redirect initiated');
-        throw new Error('Authentication in progress. Please wait...');
+      if (url) {
+        // On web, this will redirect to Google OAuth
+        // On native, we need to handle the URL differently
+        console.info('🌐 Google OAuth URL generated:', url);
+
+        // For web, open the OAuth URL
+        if (typeof window !== 'undefined') {
+          window.location.href = url;
+        }
       }
 
-      const authUser = this.mapFirebaseUser(user);
-      await this.saveUserSession(authUser);
-
-      console.info('✅ AuthService: Google Sign-In completed successfully');
-      console.info(`👤 Authenticated user: ${authUser.email}`);
-      return authUser;
+      // The actual user data will come through the auth state change listener
+      // For now, we throw an error to indicate the flow is in progress
+      throw new Error('OAuth flow initiated. Please wait for redirect...');
     } catch (error: any) {
       // Enhanced error logging
       console.error('❌ AuthService: Google Sign-In failed');
@@ -129,8 +122,12 @@ export class AuthService {
         message: error.message,
         code: error.code,
         name: error.name,
-        stack: error.stack?.split('\n').slice(0, 3).join('\n')
       });
+
+      // If this is the "flow initiated" message, re-throw it
+      if (error.message?.includes('OAuth flow initiated')) {
+        throw error;
+      }
 
       // Map error to user-friendly message
       const userMessage = this.getGoogleSignInErrorMessage(error);
@@ -145,14 +142,16 @@ export class AuthService {
    */
   static async signOutUser(): Promise<void> {
     try {
-      if (this.isFirebaseAvailable()) {
-        const auth = FirebaseWrapper.getAuth();
-        await auth.signOut();
+      console.info('🚪 AuthService: Signing out...');
+
+      if (this.isSupabaseAvailable()) {
+        await SupabaseService.signOut();
       }
+
       await this.clearUserSession();
-      await AsyncStorage.removeItem(LOCAL_AUTH_KEY);
+      console.info('✅ AuthService: Sign-out complete');
     } catch (error) {
-      console.error('Sign-out error:', error);
+      console.error('❌ AuthService: Sign-out error:', error);
       throw new Error('Failed to sign out. Please try again.');
     }
   }
@@ -160,15 +159,15 @@ export class AuthService {
   /**
    * Get current authenticated user
    */
-  static getCurrentUser(): any {
-    if (!this.isFirebaseAvailable()) {
+  static async getCurrentUser(): Promise<User | null> {
+    if (!this.isSupabaseAvailable()) {
       return null;
     }
 
     try {
-      const auth = FirebaseWrapper.getAuth();
-      return auth.currentUser;
-    } catch {
+      return await SupabaseService.getUser();
+    } catch (error) {
+      console.error('Error getting current user:', error);
       return null;
     }
   }
@@ -177,9 +176,9 @@ export class AuthService {
    * Get current user as AuthUser format
    */
   static async getCurrentAuthUser(): Promise<AuthUser | null> {
-    const user = this.getCurrentUser();
+    const user = await this.getCurrentUser();
     if (user) {
-      return this.mapFirebaseUser(user);
+      return this.mapSupabaseUser(user);
     }
 
     // Try to restore from session
@@ -190,8 +189,8 @@ export class AuthService {
    * Listen to authentication state changes
    */
   static onAuthStateChange(callback: (user: AuthUser | null) => void): () => void {
-    // If Firebase is not available, just check local session once
-    if (!this.isFirebaseAvailable()) {
+    if (!this.isSupabaseAvailable()) {
+      console.warn('⚠️  Supabase not available for auth state listener');
       this.restoreUserSession().then((user) => {
         callback(user);
       });
@@ -199,17 +198,21 @@ export class AuthService {
     }
 
     try {
-      const auth = FirebaseWrapper.getAuth();
-      return auth.onAuthStateChanged((firebaseUser: any) => {
-        if (firebaseUser) {
-          const authUser = this.mapFirebaseUser(firebaseUser);
-          this.saveUserSession(authUser); // Update session
+      const { data } = SupabaseService.onAuthStateChange((session, user) => {
+        if (user && session) {
+          const authUser = this.mapSupabaseUser(user);
+          this.saveUserSession(authUser, session.access_token); // Update session
           callback(authUser);
         } else {
           this.clearUserSession();
           callback(null);
         }
       });
+
+      // Return unsubscribe function
+      return () => {
+        data.subscription.unsubscribe();
+      };
     } catch (error) {
       console.error('Error setting up auth state listener:', error);
       // Fallback to local session check
@@ -229,82 +232,14 @@ export class AuthService {
   }
 
   /**
-   * Local Mode: Sign in with email/password
-   */
-  private static async localSignIn(email: string, password: string): Promise<AuthUser> {
-    try {
-      const storedData = await AsyncStorage.getItem(LOCAL_AUTH_KEY);
-      if (!storedData) {
-        throw new Error('No account found. Please sign up first.');
-      }
-
-      const localAuth: LocalAuthData = JSON.parse(storedData);
-
-      // Simple validation (in production, use proper password hashing)
-      if (localAuth.email === email && localAuth.password === password) {
-        const authUser: AuthUser = {
-          uid: localAuth.uid,
-          email: localAuth.email,
-          displayName: localAuth.displayName,
-          photoURL: null,
-        };
-        await this.saveUserSession(authUser);
-        return authUser;
-      } else {
-        throw new Error('Invalid email or password');
-      }
-    } catch (error: any) {
-      throw new Error(error.message || 'Local sign-in failed');
-    }
-  }
-
-  /**
-   * Local Mode: Sign up with email/password
-   */
-  private static async localSignUp(
-    email: string,
-    password: string,
-    displayName?: string
-  ): Promise<AuthUser> {
-    try {
-      // Check if account already exists
-      const existing = await AsyncStorage.getItem(LOCAL_AUTH_KEY);
-      if (existing) {
-        throw new Error('An account already exists. Please sign in.');
-      }
-
-      // Create local account
-      const uid = `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      const localAuth: LocalAuthData = {
-        email,
-        password, // In production, hash this!
-        uid,
-        displayName: displayName || null,
-      };
-
-      await AsyncStorage.setItem(LOCAL_AUTH_KEY, JSON.stringify(localAuth));
-
-      const authUser: AuthUser = {
-        uid,
-        email,
-        displayName: displayName || null,
-        photoURL: null,
-      };
-
-      await this.saveUserSession(authUser);
-      return authUser;
-    } catch (error: any) {
-      throw new Error(error.message || 'Local sign-up failed');
-    }
-  }
-
-  /**
    * Save user session to AsyncStorage for persistence
    */
-  private static async saveUserSession(user: AuthUser): Promise<void> {
+  private static async saveUserSession(user: AuthUser, accessToken?: string): Promise<void> {
     try {
       await AsyncStorage.setItem(USER_DATA_KEY, JSON.stringify(user));
-      await AsyncStorage.setItem(AUTH_TOKEN_KEY, 'authenticated');
+      if (accessToken) {
+        await AsyncStorage.setItem(AUTH_TOKEN_KEY, accessToken);
+      }
     } catch (error) {
       console.error('Error saving user session:', error);
     }
@@ -337,14 +272,14 @@ export class AuthService {
   }
 
   /**
-   * Map Firebase User to AuthUser
+   * Map Supabase User to AuthUser
    */
-  private static mapFirebaseUser(user: any): AuthUser {
+  private static mapSupabaseUser(user: User): AuthUser {
     return {
-      uid: user.uid,
-      email: user.email,
-      displayName: user.displayName,
-      photoURL: user.photoURL,
+      uid: user.id,
+      email: user.email || null,
+      displayName: user.user_metadata?.display_name || user.email?.split('@')[0] || null,
+      photoURL: user.user_metadata?.avatar_url || null,
     };
   }
 
@@ -353,39 +288,26 @@ export class AuthService {
    */
   private static getGoogleSignInErrorMessage(error: any): string {
     const errorMessage = error.message?.toLowerCase() || '';
-    const errorCode = error.code || '';
 
     // Handle common Google Sign-In errors
-    if (errorMessage.includes('cancelled') || errorMessage.includes('canceled') || errorCode === '-5') {
+    if (errorMessage.includes('cancelled') || errorMessage.includes('canceled')) {
       return 'Sign-in cancelled';
     }
 
-    if (errorMessage.includes('network') || errorCode === 'auth/network-request-failed') {
+    if (errorMessage.includes('network')) {
       return 'Network error. Please check your connection and try again.';
-    }
-
-    if (errorMessage.includes('popup-closed-by-user') || errorCode === 'auth/popup-closed-by-user') {
-      return 'Sign-in window was closed. Please try again.';
-    }
-
-    if (errorMessage.includes('popup-blocked') || errorCode === 'auth/popup-blocked') {
-      return 'Pop-up was blocked. Please allow pop-ups and try again.';
     }
 
     if (errorMessage.includes('configuration') || errorMessage.includes('not initialized')) {
       return 'Google Sign-In is not properly configured. Please contact support.';
     }
 
-    if (errorCode === 'auth/invalid-credential' || errorCode === 'auth/invalid-api-key') {
-      return 'Invalid Google credentials. Please contact support.';
+    if (errorMessage.includes('invalid')) {
+      return 'Invalid credentials. Please try again.';
     }
 
-    if (errorMessage.includes('developer') || errorCode === '10') {
-      return 'Google Sign-In configuration error. Please contact support.';
-    }
-
-    // Return the original message if it's user-friendly, otherwise generic message
-    if (errorMessage && errorMessage.length < 100 && !errorMessage.includes('undefined')) {
+    // Return the original message if it's user-friendly
+    if (errorMessage && errorMessage.length < 100) {
       return error.message;
     }
 
@@ -393,22 +315,50 @@ export class AuthService {
   }
 
   /**
-   * Get user-friendly error messages
+   * Get user-friendly error messages for auth operations
    */
-  private static getAuthErrorMessage(errorCode: string): string {
+  private static getAuthErrorMessage(error: any): string {
+    const errorMessage = error.message?.toLowerCase() || '';
+    const errorCode = error.code || '';
+
+    // Supabase-specific error codes
     const errorMessages: Record<string, string> = {
-      'auth/invalid-email': 'Invalid email address format.',
-      'auth/user-disabled': 'This account has been disabled.',
-      'auth/user-not-found': 'No account found with this email.',
-      'auth/wrong-password': 'Incorrect password.',
-      'auth/email-already-in-use': 'An account with this email already exists.',
-      'auth/weak-password': 'Password should be at least 6 characters.',
-      'auth/network-request-failed': 'Network error. Please check your connection.',
-      'auth/too-many-requests': 'Too many attempts. Please try again later.',
-      'auth/operation-not-allowed': 'This sign-in method is not enabled.',
-      'auth/invalid-credential': 'Invalid credentials. Please try again.',
+      'invalid_credentials': 'Invalid email or password.',
+      'email_not_confirmed': 'Please verify your email before signing in.',
+      'user_not_found': 'No account found with this email.',
+      'email_exists': 'An account with this email already exists.',
+      'weak_password': 'Password should be at least 6 characters.',
+      'network_error': 'Network error. Please check your connection.',
+      'too_many_requests': 'Too many attempts. Please try again later.',
     };
 
-    return errorMessages[errorCode] || 'Authentication failed. Please try again.';
+    // Check for specific error codes
+    if (errorCode && errorMessages[errorCode]) {
+      return errorMessages[errorCode];
+    }
+
+    // Check for error message patterns
+    if (errorMessage.includes('invalid') && errorMessage.includes('password')) {
+      return 'Invalid email or password.';
+    }
+
+    if (errorMessage.includes('email') && errorMessage.includes('exists')) {
+      return 'An account with this email already exists.';
+    }
+
+    if (errorMessage.includes('weak') || errorMessage.includes('password')) {
+      return 'Password should be at least 6 characters.';
+    }
+
+    if (errorMessage.includes('network')) {
+      return 'Network error. Please check your connection.';
+    }
+
+    // Return original message if it seems user-friendly
+    if (error.message && error.message.length < 100) {
+      return error.message;
+    }
+
+    return 'Authentication failed. Please try again.';
   }
 }
