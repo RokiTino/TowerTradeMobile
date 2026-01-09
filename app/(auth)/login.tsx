@@ -62,24 +62,44 @@ export default function LoginScreen() {
   };
 
   const handleGoogleSignIn = async () => {
+    console.info('🚀 Login Screen: Starting Google Sign-In flow...');
     setSocialLoading('google');
     setLoadingMessage('Signing in with Google...');
 
     try {
+      console.info('📞 Login Screen: Calling AuthContext.signInWithGoogle()...');
+
       // Universal Google Sign-In (works on all platforms)
       await signInWithGoogle();
+
+      console.info('✅ Login Screen: signInWithGoogle() completed successfully');
 
       // Show AI Market Snapshot after successful login
       setShowMarketSnapshot(true);
     } catch (error: any) {
-      console.error('Google Sign-In Error:', error);
+      console.error('❌ Login Screen: Google Sign-In Error caught');
+      console.error('📋 Error type:', typeof error);
+      console.error('📋 Error message:', error?.message);
+      console.error('📋 Error code:', error?.code);
+      console.error('📋 Error name:', error?.name);
+      console.error('📋 Error stack:', error?.stack);
+      console.error('📋 Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
 
-      // Handle user cancellation gracefully (don't show any alert)
-      if (error.message?.includes('cancelled') || error.message?.includes('canceled') || error.code === '-5') {
+      // Handle OAuth flow initiated (expected behavior - don't show error)
+      if (error.message?.includes('OAuth flow initiated') || error.message?.includes('wait for redirect')) {
+        console.info('✅ OAuth flow initiated successfully, waiting for redirect');
+        // Keep loading state while redirect happens
         return;
       }
 
-      // Determine alert type and message
+      // Handle user cancellation gracefully (don't show any alert)
+      if (error.message?.includes('cancelled') || error.message?.includes('canceled') || error.code === '-5') {
+        console.info('ℹ️  User cancelled OAuth flow');
+        setSocialLoading(null);
+        return;
+      }
+
+      // Determine alert type and message based on error details
       let alertType: 'error' | 'warning' | 'info' = 'error';
       let alertTitle = 'Google Sign-In Failed';
       let alertMessage = error.message || 'Failed to sign in with Google. Please try again.';
@@ -92,11 +112,34 @@ export default function LoginScreen() {
       }
 
       // Handle network errors
-      if (error.message?.includes('network')) {
+      if (error.message?.includes('network') || error.message?.includes('Network')) {
         alertType = 'warning';
         alertTitle = 'Network Error';
         alertMessage = 'Unable to connect. Please check your internet connection and try again.';
       }
+
+      // Handle authentication page errors
+      if (error.message?.includes('Unable to open authentication page')) {
+        alertType = 'error';
+        alertTitle = 'Cannot Open Browser';
+        alertMessage = 'Unable to open the authentication page. Please check your device settings.';
+      }
+
+      // Handle OAuth URL generation errors
+      if (error.message?.includes('Failed to generate') || error.message?.includes('No OAuth URL')) {
+        alertType = 'error';
+        alertTitle = 'OAuth Configuration Error';
+        alertMessage = 'Failed to generate authentication URL. Please check Google Cloud Console configuration.';
+      }
+
+      // Handle generic authentication failures
+      if (error.message?.includes('Failed to initiate') || error.message?.includes('Failed to sign in')) {
+        alertType = 'error';
+        alertTitle = 'Authentication Failed';
+        alertMessage = `${error.message}\n\nPlease ensure:\n• Google OAuth is configured in Google Cloud Console\n• Authorized redirect URIs are set correctly\n• Supabase is properly initialized`;
+      }
+
+      console.error('💬 Displaying error alert:', { alertTitle, alertMessage, alertType });
 
       // Show elegant Tower Gold themed alert
       setErrorAlert({
@@ -105,7 +148,8 @@ export default function LoginScreen() {
         message: alertMessage,
         type: alertType,
       });
-    } finally {
+
+      // Clear loading state
       setSocialLoading(null);
     }
   };

@@ -5,6 +5,7 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform, Linking } from 'react-native';
 import { SupabaseService } from '../supabase/SupabaseClient';
 import { User, Session } from '@supabase/supabase-js';
 
@@ -88,6 +89,7 @@ export class AuthService {
    */
   static async signInWithGoogle(): Promise<AuthUser> {
     console.info('🔐 AuthService: Starting Google Sign-In...');
+    console.info('📱 AuthService: Platform:', Platform.OS);
 
     if (!this.isSupabaseAvailable()) {
       const errorMsg = 'Supabase is not initialized. Google Sign-In requires Supabase configuration.';
@@ -98,42 +100,71 @@ export class AuthService {
     try {
       console.info('🔄 AuthService: Delegating to SupabaseService...');
 
-      // Supabase handles OAuth universally
-      const { url } = await SupabaseService.signInWithGoogle();
+      // Call Supabase OAuth - this returns a URL to open
+      const oauthResponse = await SupabaseService.signInWithGoogle();
 
-      if (url) {
-        // On web, this will redirect to Google OAuth
-        // On native, we need to handle the URL differently
-        console.info('🌐 Google OAuth URL generated:', url);
+      console.info('📋 AuthService: OAuth response received');
+      console.info('📋 OAuth URL:', oauthResponse.url);
+      console.info('📋 OAuth provider:', oauthResponse.provider);
 
-        // For web, open the OAuth URL
-        if (typeof window !== 'undefined') {
-          window.location.href = url;
+      if (oauthResponse.url) {
+        console.info('🌐 Opening OAuth URL...');
+
+        if (Platform.OS === 'web') {
+          // Web: Redirect the current window
+          console.info('🌐 Web: Redirecting to OAuth URL');
+          if (typeof window !== 'undefined') {
+            window.location.href = oauthResponse.url;
+          }
+        } else {
+          // Mobile: Open in system browser (will redirect back via deep link)
+          console.info('📱 Mobile: Opening OAuth URL in system browser');
+          const supported = await Linking.canOpenURL(oauthResponse.url);
+
+          if (supported) {
+            await Linking.openURL(oauthResponse.url);
+            console.info('✅ OAuth URL opened successfully');
+          } else {
+            console.error('❌ Cannot open OAuth URL');
+            throw new Error('Unable to open authentication page');
+          }
         }
-      }
 
-      // The actual user data will come through the auth state change listener
-      // For now, we throw an error to indicate the flow is in progress
-      throw new Error('OAuth flow initiated. Please wait for redirect...');
+        // The actual user data will come through the auth state change listener
+        // after the OAuth redirect completes
+        throw new Error('OAuth flow initiated. Please wait for redirect...');
+      } else {
+        console.error('❌ No OAuth URL returned');
+        throw new Error('Failed to generate authentication URL');
+      }
     } catch (error: any) {
-      // Enhanced error logging
-      console.error('❌ AuthService: Google Sign-In failed');
-      console.error('📋 Error details:', {
-        message: error.message,
-        code: error.code,
-        name: error.name,
-      });
+      // Comprehensive error logging
+      console.error('❌ AuthService: Google Sign-In Exception');
+      console.error('📋 Error type:', typeof error);
+      console.error('📋 Error message:', error?.message);
+      console.error('📋 Error code:', error?.code);
+      console.error('📋 Error name:', error?.name);
+      console.error('📋 Error originalError:', error?.originalError);
+      console.error('📋 Error status:', error?.status);
+      console.error('📋 Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
 
       // If this is the "flow initiated" message, re-throw it
       if (error.message?.includes('OAuth flow initiated')) {
+        console.info('ℹ️  OAuth flow in progress, re-throwing expected error');
         throw error;
       }
 
       // Map error to user-friendly message
       const userMessage = this.getGoogleSignInErrorMessage(error);
-      console.error('💬 User-facing message:', userMessage);
+      console.error('💬 User-facing error message:', userMessage);
 
-      throw new Error(userMessage);
+      // Create enhanced error with all details
+      const enhancedError = new Error(userMessage);
+      (enhancedError as any).originalError = error;
+      (enhancedError as any).code = error?.code;
+      (enhancedError as any).status = error?.status;
+
+      throw enhancedError;
     }
   }
 

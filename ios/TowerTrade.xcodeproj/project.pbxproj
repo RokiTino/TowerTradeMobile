@@ -435,6 +435,7 @@
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";
+				CODE_SIGN_ENTITLEMENTS = TowerTrade/TowerTrade.entitlements;
 			};
 			name = Debug;
 		};
@@ -463,6 +464,7 @@
 				SWIFT_OBJC_BRIDGING_HEADER = "TowerTrade/TowerTrade-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";
+				CODE_SIGN_ENTITLEMENTS = TowerTrade/TowerTrade.entitlements;
 			};
 			name = Release;
 		};

@@ -7,7 +7,8 @@
 import 'react-native-url-polyfill/auto';
 import { createClient, SupabaseClient, Session, User } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { supabaseUrl, supabaseAnonKey, validateSupabaseConfig } from '@/config/supabase.config';
+import { Platform } from 'react-native';
+import { supabaseUrl, supabaseAnonKey, supabaseCallbackUrl, validateSupabaseConfig } from '@/config/supabase.config';
 
 export class SupabaseService {
   private static client: SupabaseClient | null = null;
@@ -38,7 +39,7 @@ export class SupabaseService {
           storage: AsyncStorage,
           autoRefreshToken: true,
           persistSession: true,
-          detectSessionInUrl: false,
+          detectSessionInUrl: Platform.OS === 'web', // Enable for web to handle OAuth redirects
         },
       });
 
@@ -164,32 +165,107 @@ export class SupabaseService {
   /**
    * Sign in with Google OAuth
    * Universal method that works on Web, iOS, and Android
+   * ALWAYS uses Supabase cloud callback URL to ensure proper OAuth flow
    */
   static async signInWithGoogle() {
     if (!this.client) {
-      throw new Error('Supabase not initialized');
+      const initError = new Error('Supabase not initialized');
+      console.error('❌ Google Sign-In Error: Supabase client not initialized');
+      throw initError;
     }
 
     console.info('🔐 Starting Google Sign-In with Supabase...');
+    console.info('📱 Platform:', Platform.OS);
+    console.info('🌐 Supabase URL:', supabaseUrl);
+    console.info('🔗 Forced Callback URL:', supabaseCallbackUrl);
 
-    const { data, error } = await this.client.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: window?.location?.origin || 'exp://localhost:8081',
-        queryParams: {
-          access_type: 'offline',
-          prompt: 'consent',
+    try {
+      // CRITICAL UNDERSTANDING:
+      // - redirectTo = Where the USER is redirected AFTER successful OAuth (your app's page)
+      // - Supabase callback URL = Where GOOGLE sends the OAuth code (configured in Google Console)
+      //
+      // OAuth Flow:
+      // 1. User clicks "Sign in with Google"
+      // 2. App redirects to Google OAuth page
+      // 3. User authenticates with Google
+      // 4. Google sends OAuth code to Supabase callback URL (handled by Supabase)
+      // 5. Supabase processes the code and redirects to YOUR redirectTo URL with session tokens
+
+      let redirectTo: string;
+      const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+
+      if (Platform.OS === 'web') {
+        // For web: Redirect back to the callback page in YOUR app
+        // This should be a page that exists in your app (like /auth/callback)
+        redirectTo = `${currentOrigin}/(auth)/callback`;
+        console.info('🌐 Web: User will be redirected to:', redirectTo);
+        console.info('🌐 Web: Current origin:', currentOrigin);
+      } else {
+        // For mobile: Use deep link to return to app after OAuth
+        // The app will handle this URL and navigate to the callback route
+        redirectTo = 'towertrade://auth/callback';
+        console.info('📱 Mobile: Deep link redirect:', redirectTo);
+      }
+
+      // Enhanced logging for debugging
+      console.info('📋 OAuth Flow Configuration:');
+      console.info('  → Platform:', Platform.OS);
+      console.info('  → User redirectTo (where user goes after auth):', redirectTo);
+      console.info('  → Supabase Project URL:', supabaseUrl);
+      console.info('  → Google will send OAuth code to:', `${supabaseUrl}/auth/v1/callback`);
+
+      const oauthOptions = {
+        provider: 'google' as const,
+        options: {
+          redirectTo: redirectTo,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+          skipBrowserRedirect: Platform.OS !== 'web', // For mobile, don't auto-redirect
         },
-      },
-    });
+      };
 
-    if (error) {
-      console.error('❌ Google OAuth error:', error);
+      console.info('🔧 Full OAuth options:', JSON.stringify(oauthOptions, null, 2));
+
+      const { data, error } = await this.client.auth.signInWithOAuth(oauthOptions);
+
+      // Comprehensive error logging
+      if (error) {
+        console.error('❌ Google OAuth Error - COMPREHENSIVE DETAILS:');
+        console.error('📋 Error object:', JSON.stringify(error, null, 2));
+        console.error('📋 Error message:', error.message);
+        console.error('📋 Error name:', error.name);
+        console.error('📋 Error status:', (error as any).status);
+        console.error('📋 Error code:', (error as any).code);
+        console.error('📋 Error description:', (error as any).description);
+        console.error('📋 Error hint:', (error as any).hint);
+        console.error('📋 Full error:', error);
+
+        // Throw with enhanced error message
+        const enhancedError = new Error(
+          error.message || 'Failed to initiate Google Sign-In'
+        );
+        (enhancedError as any).originalError = error;
+        (enhancedError as any).code = (error as any).code;
+        (enhancedError as any).status = (error as any).status;
+        throw enhancedError;
+      }
+
+      console.info('✅ Google OAuth initiated successfully');
+      console.info('📋 OAuth data:', JSON.stringify(data, null, 2));
+      console.info('📋 OAuth URL:', data.url);
+      console.info('📋 OAuth provider:', data.provider);
+
+      return data;
+    } catch (error: any) {
+      console.error('❌ Exception in signInWithGoogle:');
+      console.error('📋 Exception type:', typeof error);
+      console.error('📋 Exception message:', error?.message);
+      console.error('📋 Exception stack:', error?.stack);
+      console.error('📋 Exception object:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
       throw error;
     }
-
-    console.info('✅ Google OAuth initiated successfully');
-    return data;
   }
 
   /**
