@@ -1,20 +1,21 @@
 {
   "expo": {
-    "name": "Investmate",
-    "slug": "investmate",
+    "name": "TowerTrade",
+    "slug": "towertrade",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/logo.png",
-    "scheme": "fastshot",
-    "userInterfaceStyle": "automatic",
+    "scheme": "towertrade",
+    "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": true,
+      "bundleIdentifier": "com.towertrade.app"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/logo.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#B08D57"
       },
       "edgeToEdgeEnabled": true,
       "package": "com.towertrade.app"
@@ -32,19 +33,16 @@
           "image": "./assets/images/logo.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "backgroundColor": "#B08D57"
         }
-      ]
+      ],
+      "expo-local-authentication"
     ],
     "experiments": {
-      "typedRoutes": true,
-      "baseUrl": ""
+      "typedRoutes": true
     },
     "extra": {
-      "router": {},
-      "eas": {
-        "projectId": "2c978996-e66e-4953-83a6-1c49e6d46e2c"
-      }
+      "eas": {}
     }
   }
 }

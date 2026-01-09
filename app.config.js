@@ -79,9 +79,11 @@ module.exports = {
     },
 
     // Extra configuration
+    // Note: projectId removed to allow EAS to link to fresh "towertrade" project
+    // Run 'eas project:init' or 'eas build' to create/link the project
     extra: {
       eas: {
-        projectId: '2c978996-e66e-4953-83a6-1c49e6d46e2c',
+        // projectId will be auto-generated on first EAS build
       },
     },
   },
