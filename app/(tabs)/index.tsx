@@ -16,6 +16,19 @@ import { Colors, Typography, Spacing, BorderRadius } from '@/constants/Theme';
 import { generateBatchInsights } from '@/services/aiInsightService';
 import { PropertyService } from '@/services/PropertyService';
 
+const mergePropertiesWithInsights = (
+  updatedProperties: Property[],
+  currentProperties: Property[]
+): Property[] => {
+  return updatedProperties.map((prop) => {
+    const existing = currentProperties.find((p) => p.id === prop.id);
+    return {
+      ...prop,
+      aiInsight: existing?.aiInsight || prop.aiInsight || 'Investment analysis pending.',
+    };
+  });
+};
+
 export default function DiscoveryScreen() {
   const router = useRouter();
   const [properties, setProperties] = useState<Property[]>([]);
@@ -28,16 +41,9 @@ export default function DiscoveryScreen() {
 
     // Subscribe to real-time property updates
     const unsubscribe = PropertyService.subscribeToProperties((updatedProperties) => {
-      setProperties((currentProperties) => {
-        // Merge updated properties with existing AI insights
-        return updatedProperties.map((prop) => {
-          const existing = currentProperties.find((p) => p.id === prop.id);
-          return {
-            ...prop,
-            aiInsight: existing?.aiInsight || prop.aiInsight || 'Investment analysis pending.',
-          };
-        });
-      });
+      setProperties((currentProperties) =>
+        mergePropertiesWithInsights(updatedProperties, currentProperties)
+      );
     });
 
     return () => unsubscribe();
