@@ -83,7 +83,7 @@ module.exports = {
     // Run 'eas project:init' or 'eas build' to create/link the project
     extra: {
       eas: {
-        // projectId will be auto-generated on first EAS build
+        projectId: "774bcf90-48e2-4ab5-a945-0e1b8cb0c63b"
       },
     },
   },
